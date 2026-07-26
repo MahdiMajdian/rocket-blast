@@ -1,3 +1,7 @@
 .DS_Store
 node_modules/
 *.log
+
+# source images: the converter bakes pixels into index.html, so these never
+# need publishing -- keeps originals out of a public repo by accident
+art/

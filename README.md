@@ -36,6 +36,10 @@ distance bars move to the top of the screen to leave the bottom clear for thumbs
 
 - Gravity is always pulling. The engine only pushes along the nose, so where you point
   is where you go — this is the flappy rhythm: short burns, not one long one.
+- **There is no ceiling and there are no side walls.** Yaw is a free heading with no
+  limit, so you can turn a full 180° and fly back down the level, wander off sideways,
+  or just climb over the top and skip every obstacle in the level if you feel like it.
+  The only things that end a run are the ground and anything solid you hit.
 - **Fuel** drains while burning and refills while gliding. You can hold the engine for
   about 5 seconds flat out; a sustainable cruise is roughly 60% throttle. Each gate you
   clear gives back a sip.
@@ -84,6 +88,32 @@ red for deactivated — and both routes toggle the same flags.
 | 3 | Construction Site | Framed windmills you have to time, pillars, a bobbing slab |
 | 4 | Highway Hell | Heavy traffic, sliding barriers, windmills, a tower row |
 | 5 | Megacity Finale | All of it, tighter |
+
+## Putting a picture on the targets
+
+Every level's target can show an image instead of the painted bullseye. Drop the file
+anywhere in the project and run:
+
+```bash
+node tools/image-to-target.js art/target.png 128
+```
+
+- **arg 1** — the image (png/jpg/heic/gif, any size)
+- **arg 2** — grid size, default `64`, max `256`
+
+It downsamples to a square colour grid and writes it into `index.html` between the
+`TARGET_ART` markers as base64 RGB — so the game stays a single self-contained file with
+no external asset to fetch. Decoding goes through macOS `sips`, so there are no npm
+dependencies.
+
+A note on size: the scene renders into a 288px-tall buffer and the target fills roughly
+200 of those pixels, so **64×64 is about the practical limit** (~3 screen pixels per
+voxel). 128 costs 16k instances for detail that aliases away.
+
+The picture is **hidden by default**. Tap the `ROCKET BLAST` title on the front screen
+**seven times** to switch it on — the taps are silent and unacknowledged until the
+seventh, which shows a banner. Seven more turns it back off, and the choice is
+remembered between sessions.
 
 ## Flight model
 

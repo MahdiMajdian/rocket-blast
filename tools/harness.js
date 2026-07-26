@@ -50,6 +50,7 @@ function loadGame(opts = {}) {
     requestAnimationFrame: () => 0,
     performance: { now: () => Date.now() },
     matchMedia: () => ({ matches: false, addEventListener() {} }),
+    atob: (s) => Buffer.from(s, 'base64').toString('binary'),
     addEventListener: (type, fn) => { if (opts.onListener) opts.onListener(type, fn); },
     removeEventListener() {},
     setTimeout: (fn) => { if (opts.runTimers && typeof fn === 'function') { try { fn(); } catch (_) {} } return 0; },
