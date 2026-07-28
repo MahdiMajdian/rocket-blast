@@ -2,7 +2,7 @@
 
 A 3D voxel take on Flappy Bird: instead of a bird you fly a rocket that a launcher
 throws down a city corridor. Tap the engine to stay up, steer with the arrow keys,
-and thread five levels of walls, towers, windmills, sliding barriers and traffic.
+and thread ten levels of walls, towers, windmills, sliding barriers and traffic.
 
 Single self-contained file — no build step, no dependencies. Open `index.html` in any
 browser with WebGL2.
@@ -36,13 +36,25 @@ distance bars move to the top of the screen to leave the bottom clear for thumbs
 
 - Gravity is always pulling. The engine only pushes along the nose, so where you point
   is where you go — this is the flappy rhythm: short burns, not one long one.
-- **There is no ceiling and there are no side walls.** Yaw is a free heading with no
-  limit, so you can turn a full 180° and fly back down the level, wander off sideways,
-  or just climb over the top and skip every obstacle in the level if you feel like it.
-  The only things that end a run are the ground and anything solid you hit.
-- **Fuel** drains while burning and refills while gliding. You can hold the engine for
-  about 5 seconds flat out; a sustainable cruise is roughly 60% throttle. Each gate you
-  clear gives back a sip.
+- **Yaw is a free heading** with no limit — turn a full 180° and fly back down the level
+  if you want. There *is* a ceiling at the top of the obstacles, so you can't simply climb
+  over everything.
+- **Coins** are worth 25 each, multiplied by a streak that climbs to **x8**. The
+  multiplier decays two seconds after your last pickup, so a whole coin line taken
+  cleanly is worth far more than scattered grabs.
+- **Fuel is a fixed tank.** You get **30** at the launcher and nothing comes back just
+  for waiting — burning costs 9/second, so a full tank is **3.3 seconds** of engine held
+  down. Run dry and you are gliding, and gliding sinks about 8 m/s. The tank only has to
+  cover the launch-to-first-gate leg; after that gates carry you. Levels can override it
+  with `fuel:` in their config, but measured net need is 7–21 across all ten, so they
+  all use the same.
+- **A gate refunds exactly one leg.** A gate-to-gate stretch measures at ~1.3s of
+  engine, and clearing a gate gives **12 fuel = 1.33s** — so arriving at a wall on
+  fumes still gets you to the next one. Everything off the critical path (coin detours,
+  the long 80–135 unit legs, doubling back) comes out of what you have left. Coins add
+  **+1** each. `GATE_FUEL` is derived from `FUEL_BURN` so the relationship holds if you
+  retune; `node tools/tune-fuel.js` sweeps the numbers and flags settings that make a
+  level unbeatable.
 - Every level ends in a **bullseye** set into the end wall. You have to fly into it —
   the wall around it is solid. The target is 18 × 18 units and always dead ahead at a
   comfortable height, so it's a landing you have to line up, not a needle to thread.
@@ -88,6 +100,11 @@ red for deactivated — and both routes toggle the same flags.
 | 3 | Construction Site | Framed windmills you have to time, pillars, a bobbing slab |
 | 4 | Highway Hell | Heavy traffic, sliding barriers, windmills, a tower row |
 | 5 | Megacity Finale | All of it, tighter |
+| 6 | Refinery | Tanks and stacks; the coins mark the safe line |
+| 7 | The Canyon | Tight rock gates, hard banking |
+| 8 | The Yards | Heavy traffic, low coins worth the risk |
+| 9 | Night Shift | Dark and fast; the coins light the way |
+| 10 | Terminal Velocity | Everything, back to back |
 
 ## Putting a picture on the targets
 
@@ -114,6 +131,39 @@ The picture is **hidden by default**. Tap the `ROCKET BLAST` title on the front 
 **seven times** to switch it on — the taps are silent and unacknowledged until the
 seventh, which shows a banner. Seven more turns it back off, and the choice is
 remembered between sessions.
+
+## Records and anti-cheat
+
+Finishing the **last level** — whichever that is, the screen reads `LEVELS.length`, so
+adding levels needs no change — shows a submit form with your time, score and coins.
+
+The game **does not submit a score**. It submits the *input sequence*, and the server
+replays it.
+
+That's possible because the simulation is deterministic: a fixed 60 Hz timestep, seeded
+level generation, and `Math.random()` used only for particles, never for gameplay. Key
+presses are turned into edges inside the tick loop rather than from DOM events, so a run
+is a pure function of the per-tick input mask.
+
+Inputs are run-length encoded — 6 buttons, and they change rarely, so a full minute of
+play is about **10 KB of base64**.
+
+```bash
+node tools/verify-replay.js --self-test      # bot plays, submits, verifies, tries to cheat
+node tools/verify-replay.js submission.json  # check a real submission
+```
+
+```
+honest submission  -> ACCEPTED  (verified)
+inflated score     -> REJECTED  (claimed 506750, replay yields 6750)
+faked 1s time      -> REJECTED
+truncated replay   -> REJECTED
+```
+
+Runs where a cheat was toggled are marked and refuse to submit. `verify-replay.js` is
+written to be the body of a `POST /score` handler — point `LEADERBOARD_API` in
+`index.html` at a backend to switch submissions on. Bump `BUILD` whenever physics
+change so old replays are rejected rather than silently mis-scored.
 
 ## Flight model
 

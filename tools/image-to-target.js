@@ -12,7 +12,7 @@ const os = require('os');
 
 const src = process.argv[2];
 const SIZE = Math.max(8, Math.min(256, parseInt(process.argv[3] || '64', 10)));
-const htmlPath0 = path.join(__dirname, '..', 'index.html');
+const htmlPath0 = path.join(__dirname, '..', 'src', 'index.html');
 const START = '// >>> TARGET_ART >>>', END = '// <<< TARGET_ART <<<';
 
 function splice(block) {

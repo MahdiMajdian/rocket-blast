@@ -5,3 +5,12 @@ node_modules/
 # source images: the converter bakes pixels into index.html, so these never
 # need publishing -- keeps originals out of a public repo by accident
 art/
+
+# stale build dir; the build now writes index.html at the repo root
+dist/
+
+# wrangler local state
+.wrangler/
+
+# deploy config: contains the D1 database id
+server/wrangler.toml

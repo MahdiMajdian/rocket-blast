@@ -37,7 +37,7 @@ function fakeElement() {
  * @returns the game's internals: {G, ST, keys, keyPressed, update, clamp, LEVELS, ...}
  */
 function loadGame(opts = {}) {
-  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'src', 'index.html'), 'utf8');
   const src = html.match(/<script>([\s\S]*?)<\/script>/)[1];
 
   const sandbox = {
@@ -51,6 +51,7 @@ function loadGame(opts = {}) {
     performance: { now: () => Date.now() },
     matchMedia: () => ({ matches: false, addEventListener() {} }),
     atob: (s) => Buffer.from(s, 'base64').toString('binary'),
+    btoa: (s) => Buffer.from(s, 'binary').toString('base64'),
     addEventListener: (type, fn) => { if (opts.onListener) opts.onListener(type, fn); },
     removeEventListener() {},
     setTimeout: (fn) => { if (opts.runTimers && typeof fn === 'function') { try { fn(); } catch (_) {} } return 0; },
@@ -64,7 +65,9 @@ function loadGame(opts = {}) {
   // the game's top-level `const`s are script-scoped, so hand them out explicitly
   const exported = ['G', 'ST', 'keys', 'keyPressed', 'update', 'clamp', 'LEVELS', 'Level',
                     'startLevel', 'crash', 'cheat', 'applyCheat', 'obbHit',
-                    'audioInit', 'engineSound', 'whoosh', 'beep', 'noise', 'makeEngineBuffer'];
+                    'audioInit', 'engineSound', 'whoosh', 'beep', 'noise', 'makeEngineBuffer',
+                    'tick', 'REC', 'buildSubmission', 'recordFlush', 'resetRun', 'STEP',
+                    'stepFromMask', 'toggleCheat'];
   vm.runInContext(src + `\n;globalThis.__X = {${exported.join(',')}};`, sandbox);
   return { ...sandbox.__X, sandbox };
 }

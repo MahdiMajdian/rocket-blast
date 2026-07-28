@@ -1,0 +1,57 @@
+# Builds the minified page from src/index.html and publishes it to GitHub Pages.
+# Requires: repo Settings -> Pages -> Source = "GitHub Actions".
+name: Deploy to Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build the minified page
+        run: |
+          mkdir -p _site
+          RB3D_OUT=_site node tools/build-dist.js
+          cp .nojekyll _site/ 2>/dev/null || true
+
+      - name: Sanity-check the build
+        run: |
+          test -s _site/index.html
+          # the built page must still contain the game and the leaderboard wiring
+          grep -q "ROCKET BLAST" _site/index.html
+          grep -q "workers.dev\|LEADERBOARD" _site/index.html
+          echo "built $(wc -c < _site/index.html) bytes"
+
+      - name: Verify the physics still reproduce a replay
+        run: node tools/test-submit.js
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

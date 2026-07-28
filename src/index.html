@@ -1,0 +1,1926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>ROCKET BLAST 3D</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#0a0a12; }
+  body { font-family:"Courier New",monospace; color:#fff; -webkit-font-smoothing:none; }
+  #c { display:block; width:100%; height:100%; image-rendering:pixelated; image-rendering:crisp-edges; }
+  #ui { position:fixed; inset:0; pointer-events:none; }
+  .panel {
+    position:absolute; padding:6px 10px; background:rgba(8,10,24,.62);
+    border:2px solid rgba(255,255,255,.22); letter-spacing:1px; font-weight:bold;
+    text-shadow:2px 2px 0 #000; font-size:14px; line-height:1.5;
+  }
+  #hudL { top:12px; left:12px; }
+  #hudR { top:12px; right:12px; text-align:right; }
+  #fuelWrap { position:absolute; left:12px; bottom:14px; width:220px; }
+  #fuelBar { height:16px; border:2px solid rgba(255,255,255,.35); background:rgba(0,0,0,.5); padding:2px; }
+  #fuel { height:100%; width:100%; background:#ffb02e; transition:background .2s; }
+  .barLbl { font-size:11px; letter-spacing:2px; margin-bottom:3px; text-shadow:2px 2px 0 #000; }
+  #progWrap { position:absolute; right:12px; bottom:14px; width:220px; text-align:right; }
+  #progBar { height:16px; border:2px solid rgba(255,255,255,.35); background:rgba(0,0,0,.5); padding:2px; }
+  #prog { height:100%; width:0%; background:#5ad2ff; }
+  #center { position:absolute; inset:0; display:flex; align-items:flex-end; justify-content:center;
+            flex-direction:column; text-align:center; padding-bottom:11vh; }
+  #center .box { margin:0 auto; }
+  #center .box { background:rgba(8,10,24,.78); border:3px solid rgba(255,255,255,.3); padding:22px 34px; max-width:min(90vw,640px); }
+  h1 { font-size:38px; letter-spacing:6px; margin-bottom:6px; text-shadow:4px 4px 0 #d1345b;
+       pointer-events:auto; user-select:none; -webkit-user-select:none;
+       -webkit-tap-highlight-color:transparent; }   /* no cursor change: stays unremarkable */
+  h2 { font-size:24px; letter-spacing:4px; margin-bottom:10px; text-shadow:3px 3px 0 #000; }
+  p  { font-size:14px; letter-spacing:1px; line-height:1.9; opacity:.92; text-shadow:2px 2px 0 #000; }
+  .key { display:inline-block; border:2px solid #fff; padding:0 6px; margin:0 2px; background:rgba(255,255,255,.12); }
+  .dim { opacity:.6; font-size:12px; }
+  .hl { color:#ffd24a; }
+  .bad { color:#ff6b6b; }
+  .good { color:#7dffa0; }
+  #flash { position:absolute; inset:0; background:#ff3b3b; opacity:0; }
+  /* GTA-style cheat banner: slides down from the top edge, sits, slides back */
+  #cheatBanner {
+    position:absolute; left:50%; top:0; transform:translate(-50%,-160%); opacity:0;
+    background:rgba(8,10,24,.93); border:2px solid #ffd24a; border-left-width:9px;
+    padding:9px 20px; font-weight:bold; letter-spacing:2px; font-size:14px;
+    text-shadow:2px 2px 0 #000; white-space:nowrap; max-width:92vw; text-align:left;
+    transition:transform .3s cubic-bezier(.2,.9,.3,1.25), opacity .3s;
+  }
+  #cheatBanner.show { transform:translate(-50%, 88px); opacity:1; }
+  body.touch #cheatBanner.show { transform:translate(-50%, 140px); }
+  #cheatBanner .cb-t { display:block; font-size:10px; letter-spacing:4px; color:#ffd24a; margin-bottom:3px; }
+  #cheatBanner.off { border-color:#ff6b6b; }
+  #cheatBanner.off .cb-t { color:#ff6b6b; }
+  .panel { pointer-events:auto; transition:border-color .12s; }
+  .panel.tapped { border-color:#ffd24a; }
+  #invBtn {
+    pointer-events:auto; cursor:pointer; margin-top:14px; display:inline-block;
+    background:rgba(255,255,255,.10); border:2px solid rgba(255,255,255,.42); color:#fff;
+    font-family:inherit; font-weight:bold; font-size:13px; letter-spacing:1px;
+    padding:8px 16px; text-shadow:2px 2px 0 #000; -webkit-tap-highlight-color:transparent;
+  }
+  #invBtn:hover { background:rgba(255,255,255,.2); border-color:#fff; }
+  #subRow { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+  #subName, #subBtn {
+    pointer-events:auto; font-family:inherit; font-weight:bold; font-size:14px;
+    letter-spacing:2px; padding:9px 12px; border:2px solid rgba(255,255,255,.45);
+    background:rgba(0,0,0,.45); color:#fff; -webkit-tap-highlight-color:transparent;
+  }
+  #subName { width:180px; text-align:center; text-transform:uppercase; }
+  #subName::placeholder { color:rgba(255,255,255,.35); letter-spacing:1px; }
+  #subName:focus { outline:none; border-color:#ffd24a; }
+  #subBtn { cursor:pointer; background:rgba(255,210,74,.18); border-color:#ffd24a; color:#ffd24a; }
+  #subBtn:hover { background:rgba(255,210,74,.34); }
+  .boardTitle { margin-top:16px; font-size:10px; letter-spacing:4px; opacity:.6; font-weight:bold; }
+  #topTbl { margin:6px auto 0; border-collapse:collapse; font-size:13px; letter-spacing:1px; }
+  #topTbl th { font-size:10px; letter-spacing:3px; opacity:.55; padding:0 10px 4px; font-weight:bold; }
+  #topTbl td { padding:2px 10px; text-shadow:2px 2px 0 #000; }
+  #topTbl td:nth-child(2) { text-align:left; }
+  #topTbl td:nth-child(3), #topTbl td:nth-child(4) { text-align:right; }
+  #invBtn .sw { color:#ffd24a; }
+  #toast { position:absolute; top:26%; left:0; right:0; text-align:center; font-size:28px;
+           letter-spacing:5px; font-weight:bold; text-shadow:3px 3px 0 #000; opacity:0; }
+  #err { position:fixed; inset:0; display:none; align-items:center; justify-content:center; padding:30px; text-align:center; }
+
+  /* ---- touch controls: hidden until we see a coarse pointer ---- */
+  #touch { display:none; }
+  body.touch #touch { display:block; }
+  body.touch { touch-action:none; }
+  /* clear the bottom of the screen for thumbs */
+  /* each bar takes exactly half the width minus the margins, so they can never
+     meet no matter how narrow the screen gets */
+  body.touch #fuelWrap { top:96px; bottom:auto; left:12px;  right:auto;
+                         width:calc(50% - 18px); max-width:none; }
+  body.touch #progWrap { top:96px; bottom:auto; right:12px; left:auto;
+                         width:calc(50% - 18px); max-width:none; }
+  /* and keep the score/lives panels off each other and off the bars */
+  body.touch .panel { font-size:12px; padding:5px 8px; max-width:46%; }
+  body.touch #center   { padding-bottom:26vh; }
+  body.touch #center .box { background:rgba(8,10,24,.95); padding:18px 20px; }
+  body.touch h1 { font-size:30px; letter-spacing:4px; }
+  #dpad { position:absolute; right:16px; bottom:22px; width:186px; height:186px; }
+  .tbtn {
+    position:absolute; pointer-events:auto; touch-action:none; user-select:none;
+    -webkit-user-select:none; -webkit-tap-highlight-color:transparent;
+    background:rgba(8,10,24,.55); border:2px solid rgba(255,255,255,.34); color:#fff;
+    font-family:inherit; font-weight:bold; font-size:12px; letter-spacing:1px;
+    line-height:1.15; text-shadow:2px 2px 0 #000; padding:0;
+  }
+  .tbtn.on { background:rgba(255,210,74,.5); border-color:#ffd24a; color:#fff; }
+  #tUp    { left:62px; top:0;     width:62px; height:62px; }
+  #tDown  { left:62px; top:124px; width:62px; height:62px; }
+  #tLeft  { left:0;    top:62px;  width:62px; height:62px; }
+  #tRight { left:124px;top:62px;  width:62px; height:62px; }
+  #tFire  { position:absolute; left:22px; bottom:44px; width:112px; height:112px;
+            border-radius:50%; font-size:15px; letter-spacing:2px; }
+  #tUp, #tDown, #tLeft, #tRight { font-size:20px; }
+  @media (max-width:359px){   /* dpad + fire button no longer both fit at full size */
+    #dpad { width:156px; height:156px; right:12px; }
+    #tUp{left:52px;top:0;width:52px;height:52px}    #tDown{left:52px;top:104px;width:52px;height:52px}
+    #tLeft{left:0;top:52px;width:52px;height:52px}  #tRight{left:104px;top:52px;width:52px;height:52px}
+    #tFire { width:96px; height:96px; left:14px; font-size:13px; }
+    #tUp, #tDown, #tLeft, #tRight { font-size:18px; }
+  }
+  @media (max-height:430px){
+    #dpad { width:150px; height:150px; bottom:14px; }
+    #tUp{left:50px;top:0;width:50px;height:50px} #tDown{left:50px;top:100px;width:50px;height:50px}
+    #tLeft{left:0;top:50px;width:50px;height:50px} #tRight{left:100px;top:50px;width:50px;height:50px}
+    #tFire { width:92px; height:92px; bottom:26px; }
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+  <div class="panel" id="hudL">LEVEL 1<br>SCORE 0</div>
+  <div class="panel" id="hudR">LIVES ###<br>SPD 0</div>
+  <div id="fuelWrap"><div class="barLbl" id="fuelLbl">FUEL</div><div id="fuelBar"><div id="fuel"></div></div></div>
+  <div id="progWrap"><div class="barLbl">DISTANCE</div><div id="progBar"><div id="prog"></div></div></div>
+  <div id="toast"></div>
+  <div id="cheatBanner"></div>
+  <div id="center"><div class="box" id="msg"></div></div>
+  <div id="flash"></div>
+  <div id="touch">
+    <div id="dpad">
+      <button class="tbtn" id="tUp"    data-k="up">&#9650;</button>
+      <button class="tbtn" id="tLeft"  data-k="left">&#9664;</button>
+      <button class="tbtn" id="tRight" data-k="right">&#9654;</button>
+      <button class="tbtn" id="tDown"  data-k="down">&#9660;</button>
+    </div>
+    <button class="tbtn" id="tFire" data-k="fire">FIRE</button>
+  </div>
+</div>
+<div id="err"><div><h2>WEBGL2 NOT AVAILABLE</h2><p>This game needs WebGL2. Try a recent Chrome, Firefox or Safari.</p></div></div>
+<script>
+"use strict";
+//=============================================================================
+// ROCKET BLAST 3D  --  voxel flappy-rocket with a launcher, 5 levels
+//=============================================================================
+const canvas = document.getElementById('c');
+const gl = canvas.getContext('webgl2', { antialias:false, alpha:false, powerPreference:'high-performance' });
+if (!gl) { document.getElementById('err').style.display = 'flex'; throw new Error('no webgl2'); }
+
+//--------------------------------------- math -------------------------------
+const V3 = (x=0,y=0,z=0)=>({x,y,z});
+const clamp = (v,a,b)=> v<a?a:(v>b?b:v);
+const lerp  = (a,b,t)=> a+(b-a)*t;
+function hex(h){ return [((h>>16)&255)/255, ((h>>8)&255)/255, (h&255)/255]; }
+function mulberry(seed){ return function(){ seed|=0; seed=seed+0x6D2B79F5|0;
+  let t=Math.imul(seed^seed>>>15, 1|seed); t=t+Math.imul(t^t>>>7, 61|t)^t;
+  return ((t^t>>>14)>>>0)/4294967296; }; }
+
+// row-major 3x3 rotation from yaw(Y) pitch(X) roll(Z):  R = Ry*Rx*Rz
+function eulerR(out, yaw, pitch, roll){
+  const cy=Math.cos(yaw), sy=Math.sin(yaw), cp=Math.cos(pitch), sp=Math.sin(pitch),
+        cr=Math.cos(roll), sr=Math.sin(roll);
+  out[0]= cy*cr + sy*sp*sr; out[1]= -cy*sr + sy*sp*cr; out[2]= sy*cp;
+  out[3]= cp*sr;            out[4]= cp*cr;             out[5]= -sp;
+  out[6]= -sy*cr + cy*sp*sr;out[7]= sy*sr + cy*sp*cr;  out[8]= cy*cp;
+  return out;
+}
+const IDR = [1,0,0, 0,1,0, 0,0,1];
+function rotv(R,x,y,z,o){ o.x=R[0]*x+R[1]*y+R[2]*z; o.y=R[3]*x+R[4]*y+R[5]*z; o.z=R[6]*x+R[7]*y+R[8]*z; return o; }
+
+// column-major mat4 into flat array
+function setMat(a,o,R,px,py,pz,sx,sy,sz){
+  a[o  ]=R[0]*sx; a[o+1]=R[3]*sx; a[o+2]=R[6]*sx; a[o+3]=0;
+  a[o+4]=R[1]*sy; a[o+5]=R[4]*sy; a[o+6]=R[7]*sy; a[o+7]=0;
+  a[o+8]=R[2]*sz; a[o+9]=R[5]*sz; a[o+10]=R[8]*sz;a[o+11]=0;
+  a[o+12]=px;     a[o+13]=py;     a[o+14]=pz;     a[o+15]=1;
+}
+function perspective(out, fovy, aspect, near, far){
+  const f = 1/Math.tan(fovy/2), nf = 1/(near-far);
+  out[0]=f/aspect;out[1]=0;out[2]=0;out[3]=0;
+  out[4]=0;out[5]=f;out[6]=0;out[7]=0;
+  out[8]=0;out[9]=0;out[10]=(far+near)*nf;out[11]=-1;
+  out[12]=0;out[13]=0;out[14]=2*far*near*nf;out[15]=0; return out;
+}
+function lookAt(out, ex,ey,ez, cx,cy,cz, ux,uy,uz){
+  let zx=ex-cx, zy=ey-cy, zz=ez-cz;
+  let l=Math.hypot(zx,zy,zz)||1; zx/=l; zy/=l; zz/=l;
+  let xx=uy*zz-uz*zy, xy=uz*zx-ux*zz, xz=ux*zy-uy*zx;
+  l=Math.hypot(xx,xy,xz)||1; xx/=l; xy/=l; xz/=l;
+  const yx=zy*xz-zz*xy, yy=zz*xx-zx*xz, yz=zx*xy-zy*xx;
+  out[0]=xx;out[1]=yx;out[2]=zx;out[3]=0;
+  out[4]=xy;out[5]=yy;out[6]=zy;out[7]=0;
+  out[8]=xz;out[9]=yz;out[10]=zz;out[11]=0;
+  out[12]=-(xx*ex+xy*ey+xz*ez);
+  out[13]=-(yx*ex+yy*ey+yz*ez);
+  out[14]=-(zx*ex+zy*ey+zz*ez);
+  out[15]=1; return out;
+}
+function mul4(out,a,b){
+  for(let i=0;i<4;i++){ const b0=b[i*4],b1=b[i*4+1],b2=b[i*4+2],b3=b[i*4+3];
+    out[i*4  ]=a[0]*b0+a[4]*b1+a[8 ]*b2+a[12]*b3;
+    out[i*4+1]=a[1]*b0+a[5]*b1+a[9 ]*b2+a[13]*b3;
+    out[i*4+2]=a[2]*b0+a[6]*b1+a[10]*b2+a[14]*b3;
+    out[i*4+3]=a[3]*b0+a[7]*b1+a[11]*b2+a[15]*b3; }
+  return out;
+}
+
+//--------------------------------------- gl helpers -------------------------
+function sh(type, src){
+  const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+  if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)+"\n"+src);
+  return s;
+}
+function prog(vs, fs){
+  const p = gl.createProgram();
+  gl.attachShader(p, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(p, sh(gl.FRAGMENT_SHADER, fs));
+  gl.linkProgram(p);
+  if(!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+  return p;
+}
+
+const SCENE_VS = `#version 300 es
+precision highp float;
+layout(location=0) in vec3 aPos;
+layout(location=1) in vec3 aNor;
+layout(location=2) in mat4 iM;
+layout(location=6) in vec3 iCol;
+uniform mat4 uVP; uniform vec3 uCam;
+out vec3 vC; out vec3 vN; out float vD;
+void main(){
+  vec4 w = iM * vec4(aPos,1.0);
+  gl_Position = uVP * w;
+  vN = mat3(iM) * aNor;
+  vC = iCol;
+  vD = length(w.xyz - uCam);
+}`;
+const SCENE_FS = `#version 300 es
+precision highp float;
+in vec3 vC; in vec3 vN; in float vD;
+uniform vec3 uFog; uniform vec2 uFogR; uniform vec3 uLight;
+out vec4 o;
+void main(){
+  vec3 n = normalize(vN);
+  float d = max(dot(n, normalize(uLight)), 0.0);
+  float amb = 0.50 + 0.18*n.y + 0.06*n.x;
+  vec3 c = vC * (amb + 0.72*d);
+  float f = clamp((vD-uFogR.x)/(uFogR.y-uFogR.x), 0.0, 1.0);
+  o = vec4(mix(c, uFog, f*f), 1.0);
+}`;
+const QUAD_VS = `#version 300 es
+precision highp float;
+layout(location=0) in vec2 aP; out vec2 vUV;
+void main(){ vUV = aP*0.5+0.5; gl_Position = vec4(aP,0.0,1.0); }`;
+const SKY_FS = `#version 300 es
+precision highp float;
+in vec2 vUV; uniform vec3 uTop; uniform vec3 uBot; out vec4 o;
+void main(){
+  float t = pow(clamp(vUV.y,0.0,1.0), 0.85);
+  vec3 c = mix(uBot, uTop, t);
+  float band = floor(t*22.0)/22.0;          // chunky sky bands = pixel vibe
+  c = mix(c, mix(uBot,uTop,band), 0.55);
+  o = vec4(c,1.0);
+}`;
+const BLIT_FS = `#version 300 es
+precision highp float;
+in vec2 vUV; uniform sampler2D uT; out vec4 o;
+void main(){ o = texture(uT, vUV); }`;
+
+const pScene = prog(SCENE_VS, SCENE_FS);
+const pSky   = prog(QUAD_VS, SKY_FS);
+const pBlit  = prog(QUAD_VS, BLIT_FS);
+const U = (p,n)=>gl.getUniformLocation(p,n);
+const uVP=U(pScene,'uVP'), uCam=U(pScene,'uCam'), uFog=U(pScene,'uFog'),
+      uFogR=U(pScene,'uFogR'), uLight=U(pScene,'uLight');
+const uTop=U(pSky,'uTop'), uBot=U(pSky,'uBot'), uT=U(pBlit,'uT');
+
+//--------------------------------------- cube geometry ----------------------
+function buildCube(){
+  const pos=[], nor=[], idx=[];
+  const dirs=[[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+  const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+  for(const n of dirs){
+    const u = Math.abs(n[1])===1 ? [1,0,0] : [0,1,0];
+    const t = cross(u,n), b = cross(n,t);
+    const base = pos.length/3;
+    for(const [su,sv] of [[-1,-1],[1,-1],[1,1],[-1,1]]){
+      pos.push((n[0]+su*t[0]+sv*b[0])*0.5,(n[1]+su*t[1]+sv*b[1])*0.5,(n[2]+su*t[2]+sv*b[2])*0.5);
+      nor.push(n[0],n[1],n[2]);
+    }
+    idx.push(base,base+1,base+2, base,base+2,base+3);
+  }
+  return { pos:new Float32Array(pos), nor:new Float32Array(nor), idx:new Uint16Array(idx) };
+}
+const CUBE = buildCube();
+const vbPos = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, vbPos); gl.bufferData(gl.ARRAY_BUFFER, CUBE.pos, gl.STATIC_DRAW);
+const vbNor = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, vbNor); gl.bufferData(gl.ARRAY_BUFFER, CUBE.nor, gl.STATIC_DRAW);
+const ibCube= gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibCube); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, CUBE.idx, gl.STATIC_DRAW);
+
+const STRIDE = 19*4; // mat4 + vec3
+function makeBatch(maxInstances, usage){
+  const buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, maxInstances*STRIDE, usage);
+  const vao = gl.createVertexArray();
+  gl.bindVertexArray(vao);
+  gl.bindBuffer(gl.ARRAY_BUFFER, vbPos); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0,3,gl.FLOAT,false,0,0);
+  gl.bindBuffer(gl.ARRAY_BUFFER, vbNor); gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1,3,gl.FLOAT,false,0,0);
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  for(let i=0;i<4;i++){ gl.enableVertexAttribArray(2+i); gl.vertexAttribPointer(2+i,4,gl.FLOAT,false,STRIDE,i*16); gl.vertexAttribDivisor(2+i,1); }
+  gl.enableVertexAttribArray(6); gl.vertexAttribPointer(6,3,gl.FLOAT,false,STRIDE,64); gl.vertexAttribDivisor(6,1);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibCube);
+  gl.bindVertexArray(null);
+  return { buf, vao, count:0, max:maxInstances };
+}
+const DYN_MAX = 4000;
+const dynBatch = makeBatch(DYN_MAX, gl.DYNAMIC_DRAW);
+const dynData  = new Float32Array(DYN_MAX*19);
+let dynN = 0;
+function dpush(R,px,py,pz,sx,sy,sz,col){
+  if(dynN>=DYN_MAX) return;
+  const o = dynN*19; setMat(dynData,o,R,px,py,pz,sx,sy,sz);
+  dynData[o+16]=col[0]; dynData[o+17]=col[1]; dynData[o+18]=col[2]; dynN++;
+}
+let staticBatch = null;
+function uploadStatic(arr){
+  if(staticBatch) gl.deleteBuffer(staticBatch.buf), gl.deleteVertexArray(staticBatch.vao);
+  const n = arr.length/19;
+  staticBatch = makeBatch(Math.max(n,1), gl.STATIC_DRAW);
+  gl.bindBuffer(gl.ARRAY_BUFFER, staticBatch.buf);
+  gl.bufferSubData(gl.ARRAY_BUFFER, 0, arr);
+  staticBatch.count = n;
+}
+// fullscreen quad
+const quadVAO = gl.createVertexArray(); gl.bindVertexArray(quadVAO);
+const qb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, qb);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 3,-1, -1,3]), gl.STATIC_DRAW);
+gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0);
+gl.bindVertexArray(null);
+
+//--------------------------------------- low-res render target --------------
+let fbo=null, fboTex=null, fboDepth=null, RTW=0, RTH=0, VW=0, VH=0;
+const RT_HEIGHT = 288;   // internal vertical resolution -> chunky pixels
+function resize(){
+  VW = Math.max(320, window.innerWidth|0); VH = Math.max(240, window.innerHeight|0);
+  canvas.width = VW; canvas.height = VH;
+  const aspect = VW/VH;
+  RTH = RT_HEIGHT; RTW = Math.max(2, Math.round(RT_HEIGHT*aspect));
+  if(fbo){ gl.deleteFramebuffer(fbo); gl.deleteTexture(fboTex); gl.deleteRenderbuffer(fboDepth); }
+  fboTex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, fboTex);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,RTW,RTH,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  fboDepth = gl.createRenderbuffer();
+  gl.bindRenderbuffer(gl.RENDERBUFFER, fboDepth);
+  gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, RTW, RTH);
+  fbo = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, fboTex, 0);
+  gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, fboDepth);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+}
+window.addEventListener('resize', resize); resize();
+
+//=============================================================================
+// LEVELS
+//=============================================================================
+const CORRIDOR = 22;   // |x| bound
+const CEIL     = 38;   // how tall obstacles are built. NOT a limit on the player --
+                       // there is no ceiling, so you can climb over the lot if you like
+const GROUND_Y = 1;    // top of ground slab
+
+const PAL = {
+  concrete:hex(0x9aa3ad), concrete2:hex(0x7c8590), brick:hex(0xb85c3c), brickDark:hex(0x8f4227),
+  metal:hex(0x6f7b8a), metalDark:hex(0x4a5361), rust:hex(0xa8603a),
+  glass:hex(0x6fd3e8), glassLit:hex(0xffe36b), asphalt:hex(0x3b3f47), asphalt2:hex(0x33373e),
+  grass:hex(0x4e8b46), grass2:hex(0x437a3c), sand:hex(0xcbb181),
+  hazardA:hex(0xf2c14e), hazardB:hex(0x2b2b30),
+  carRed:hex(0xd94a4a), carBlue:hex(0x4a7ad9), carGreen:hex(0x59b567), carWhite:hex(0xe8e8ee),
+  roof:hex(0x7a4a3a), wood:hex(0x8b6b4a), leaf:hex(0x3f7a3a),
+  neon:hex(0xff4fa3), neon2:hex(0x54f2f2),
+};
+
+class Level {
+  constructor(cfg){
+    Object.assign(this, cfg);
+    this.S = [];            // static instance floats
+    this.colliders = [];    // {x,y,z,hx,hy,hz}
+    this.dyn = [];          // dynamic obstacles
+    this.gates = [];        // {z, passed}
+    this.coins = [];        // {x,y,z,taken} floating pickups
+    this.target = null;     // {x,y,s,z} bullseye that ends the level
+    this.rnd = mulberry(cfg.seed);
+  }
+  box(px,py,pz,sx,sy,sz,col){
+    const o = this.S.length; this.S.length = o+19;
+    setMat(this.S,o,IDR,px,py,pz,sx,sy,sz);
+    this.S[o+16]=col[0]; this.S[o+17]=col[1]; this.S[o+18]=col[2];
+  }
+  vox(px,py,pz,sx,sy,sz,col,amt=0.18){
+    const k = 1 + (this.rnd()-0.5)*2*amt;
+    this.box(px,py,pz,sx,sy,sz,[clamp(col[0]*k,0,1),clamp(col[1]*k,0,1),clamp(col[2]*k,0,1)]);
+  }
+  col(x,y,z,hx,hy,hz){ this.colliders.push({x,y,z,hx,hy,hz}); }
+  gate(z, ax, ay){ this.gates.push({z, passed:false, ax:ax||0, ay:ay===undefined?12:ay}); }
+  coin(x, y, z){ this.coins.push({x, y, z, taken:false}); }
+  // a run of coins along a path -- the reward for taking the good line
+  coinRun(x0,y0,z0, x1,y1,z1, n){
+    for(let i=0;i<n;i++){
+      const t = n===1 ? 0 : i/(n-1);
+      this.coin(lerp(x0,x1,t), lerp(y0,y1,t), lerp(z0,z1,t));
+    }
+  }
+  // coins on an arc, for looping over or under something
+  coinArc(cx,cy,cz, r, a0,a1, n, vertical){
+    for(let i=0;i<n;i++){
+      const a = lerp(a0, a1, n===1?0:i/(n-1));
+      if(vertical) this.coin(cx, cy + Math.sin(a)*r, cz + Math.cos(a)*r);
+      else         this.coin(cx + Math.cos(a)*r, cy, cz + Math.sin(a)*r);
+    }
+  }
+}
+
+//--- ground + roadside scenery ----------------------------------------------
+function buildGround(L){
+  const T = 6, zEnd = L.len + 90;
+  for(let z=-60; z<zEnd; z+=T){
+    for(let x=-42; x<=42; x+=T){
+      const road = Math.abs(x) < 12;
+      let c = road ? (((x/T|0)+(z/T|0))&1 ? PAL.asphalt : PAL.asphalt2) : (L.groundCol||PAL.grass);
+      L.vox(x, GROUND_Y-1, z, T*0.99, 2, T*0.99, c, road?0.10:0.22);
+    }
+  }
+  // lane markings
+  for(let z=-60; z<zEnd; z+=12) L.box(0, GROUND_Y+0.06, z, 1.2, 0.2, 6, PAL.hazardA);
+}
+function scenery(L, z0, z1){
+  for(let z=z0; z<z1; z+=14){
+    for(const side of [-1,1]){
+      const r = L.rnd();
+      const x = side*(26 + L.rnd()*14);
+      if(r < 0.45){ // house
+        const h = 4+L.rnd()*7, w = 5+L.rnd()*4;
+        L.vox(x, GROUND_Y+h/2, z, w, h, w, PAL.concrete2, 0.2);
+        L.vox(x, GROUND_Y+h+1, z, w*1.1, 2, w*1.1, PAL.roof, 0.15);
+      } else if(r < 0.72){ // tree
+        L.box(x, GROUND_Y+1.5, z, 1, 3, 1, PAL.wood);
+        L.vox(x, GROUND_Y+4.4, z, 4, 4, 4, PAL.leaf, 0.25);
+      } else if(r < 0.86){ // tower block
+        const h = 10+L.rnd()*22;
+        L.vox(x, GROUND_Y+h/2, z, 7, h, 7, PAL.concrete, 0.14);
+        for(let wy=3; wy<h-1; wy+=3.2)
+          L.box(x, GROUND_Y+wy, z-3.6, 4.2, 1.2, 0.4, L.rnd()<0.4?PAL.glassLit:PAL.glass);
+      }
+    }
+  }
+}
+
+//--- obstacle: voxel wall with a hole ---------------------------------------
+function wall(L, z, hx, hy, hw, hh, col){
+  const VS = 2.6, thick = 3;
+  col = col || PAL.brick;
+  for(let x=-CORRIDOR; x<=CORRIDOR; x+=VS){
+    for(let y=GROUND_Y+VS/2; y<=CEIL; y+=VS){
+      if(Math.abs(x-hx) < hw/2 && Math.abs(y-hy) < hh/2) continue;
+      const edge = (Math.abs(x-hx) < hw/2+VS && Math.abs(y-hy) < hh/2+VS);
+      L.vox(x, y, z, VS*0.95, VS*0.95, thick, edge?PAL.hazardA:col, edge?0.10:0.22);
+    }
+  }
+  const top = CEIL+4, C = CORRIDOR+4;
+  // left / right / below / above the hole
+  const lx0=-C, lx1=hx-hw/2, rx0=hx+hw/2, rx1=C;
+  if(lx1>lx0) L.col((lx0+lx1)/2, top/2, z, (lx1-lx0)/2, top/2, thick/2);
+  if(rx1>rx0) L.col((rx0+rx1)/2, top/2, z, (rx1-rx0)/2, top/2, thick/2);
+  const by = hy-hh/2, ay = hy+hh/2;
+  if(by>0)   L.col(hx, by/2, z, hw/2, by/2, thick/2);
+  if(ay<top) L.col(hx, (ay+top)/2, z, hw/2, (top-ay)/2, thick/2);
+  L.gate(z, hx, hy);
+}
+
+//--- obstacle: buildings you weave between ----------------------------------
+function building(L, x, z, w, d, h, lit){
+  L.vox(x, GROUND_Y+h/2, z, w, h, d, PAL.concrete, 0.13);
+  for(let wy=3; wy<h-1; wy+=3.4){
+    for(let wx=-w/2+1.6; wx<w/2-1; wx+=2.6){
+      const on = L.rnd() < (lit?0.55:0.25);
+      L.box(x+wx, GROUND_Y+wy, z-d/2-0.3, 1.5, 1.4, 0.4, on?PAL.glassLit:PAL.glass);
+      L.box(x+wx, GROUND_Y+wy, z+d/2+0.3, 1.5, 1.4, 0.4, on?PAL.glassLit:PAL.glass);
+    }
+  }
+  L.vox(x, GROUND_Y+h+0.6, z, w*1.05, 1.2, d*1.05, PAL.metalDark, 0.1);
+  L.col(x, (GROUND_Y+h)/2, z, w/2, (GROUND_Y+h)/2, d/2);
+}
+function buildingRow(L, z, gapX, gapW){
+  const h1 = CEIL+8, h2 = CEIL+8;   // full height: the gap is the only way through
+  const leftEdge = gapX-gapW/2, rightEdge = gapX+gapW/2;
+  const lw = leftEdge - (-CORRIDOR-2), rw = (CORRIDOR+2) - rightEdge;
+  if(lw>2)  building(L, (-CORRIDOR-2+leftEdge)/2, z, lw, 9, h1, true);
+  if(rw>2)  building(L, (rightEdge+CORRIDOR+2)/2, z, rw, 9, h2, true);
+  L.gate(z, gapX, 12);
+}
+// a hanging block above the gap so you cannot just fly high
+// caps the top of a gap: solid from `openTop` all the way up to the ceiling, so
+// raising CEIL makes the cap taller rather than moving it out of the play area
+function ceilingBlock(L, z, x, w, openTop){
+  for(let xx=x-w/2; xx<x+w/2; xx+=2.6)
+    for(let yy=openTop; yy<CEIL; yy+=2.6)
+      L.vox(xx, yy, z, 2.5, 2.5, 3, PAL.metal, 0.18);
+  L.col(x, (openTop+CEIL+3)/2, z, w/2, (CEIL+3-openTop)/2, 1.6);
+}
+
+// Artwork for the final target. Stored as base64 RGB rather than a nested array
+// literal -- at 128x128 that is ~64 KB instead of ~190 KB of JS source.
+function decodeTargetArt(b64, w){
+  const bin = atob(b64), rows = [];
+  let p = 0;
+  for(let y=0; y<w; y++){
+    const row = new Array(w);
+    for(let x=0; x<w; x++, p+=3)
+      row[x] = [bin.charCodeAt(p), bin.charCodeAt(p+1), bin.charCodeAt(p+2)];
+    rows.push(row);
+  }
+  return rows;
+}
+// Regenerate with:  node tools/image-to-target.js <image-file> [size]
+// >>> TARGET_ART >>>
+const TARGET_ART_W = 0, TARGET_ART_B64 = null;
+// <<< TARGET_ART <<<
+const TARGET_ART = TARGET_ART_B64 ? decodeTargetArt(TARGET_ART_B64, TARGET_ART_W) : null;
+
+//--- the level goal: a bullseye set into the end wall ------------------------
+// Every level uses the picture once the hidden title-tap unlock is on; otherwise
+// they all show the painted bullseye.
+function endTarget(L, tx, ty, S){
+  const art = (G.imageTarget && TARGET_ART) ? TARGET_ART : null;
+  const z = L.len, VS = 2.6, thick = 3;
+  for(let x=-CORRIDOR; x<=CORRIDOR; x+=VS){
+    for(let y=GROUND_Y+VS/2; y<=CEIL; y+=VS){
+      if(Math.abs(x-tx) < S && Math.abs(y-ty) < S) continue;
+      L.vox(x, y, z, VS*0.95, VS*0.95, thick, PAL.metalDark, 0.16);
+    }
+  }
+  // concentric square rings, painted a touch proud of the wall
+  const RINGS = [hex(0xffd24a), hex(0xd93b3b), hex(0xf2f2f7), hex(0xd93b3b)];
+  const n = art ? art.length : Math.max(6, Math.round(2*S/VS)), cell = 2*S/n;
+  for(let i=0;i<n;i++){
+    for(let j=0;j<n;j++){
+      const x = tx - S + (i+0.5)*cell, y = ty - S + (j+0.5)*cell;
+      if(art){                                   // artwork: exact colours, no noise
+        const p = art[n-1-j][i];                 // grid row 0 is the top of the picture
+        L.box(x, y, z-0.8, cell*0.99, cell*0.99, 2.0, [p[0]/255, p[1]/255, p[2]/255]);
+        continue;
+      }
+      const d = Math.max(Math.abs(x-tx), Math.abs(y-ty)) / S;
+      L.vox(x, y, z-0.8, cell*0.95, cell*0.95, 2.0, RINGS[Math.min(3, Math.floor(d*4))], 0.07);
+    }
+  }
+  // hazard frame so the goal reads from a long way off
+  for(let x=tx-S-1.3; x<=tx+S+1.3; x+=2.6){
+    L.box(x, ty-S-1.3, z-1.4, 2.5, 2.5, 1.6, ((x/2.6)|0)&1 ? PAL.hazardA : PAL.hazardB);
+    L.box(x, ty+S+1.3, z-1.4, 2.5, 2.5, 1.6, ((x/2.6)|0)&1 ? PAL.hazardA : PAL.hazardB);
+  }
+  for(let y=ty-S-1.3; y<=ty+S+1.3; y+=2.6){
+    L.box(tx-S-1.3, y, z-1.4, 2.5, 2.5, 1.6, ((y/2.6)|0)&1 ? PAL.hazardA : PAL.hazardB);
+    L.box(tx+S+1.3, y, z-1.4, 2.5, 2.5, 1.6, ((y/2.6)|0)&1 ? PAL.hazardA : PAL.hazardB);
+  }
+  // wall colliders hug the target square exactly -- inside it you score, outside you die
+  const top = CEIL+4, C = CORRIDOR+4;
+  const lx1 = tx-S, rx0 = tx+S;
+  L.col((-C+lx1)/2, top/2, z, (lx1+C)/2, top/2, thick/2);
+  L.col(( rx0+C)/2, top/2, z, (C-rx0)/2, top/2, thick/2);
+  const by = ty-S, ay = ty+S;
+  if(by > 0)   L.col(tx, by/2, z, S, by/2, thick/2);
+  if(ay < top) L.col(tx, (ay+top)/2, z, S, (top-ay)/2, thick/2);
+  L.target = { x:tx, y:ty, s:S, z };
+}
+
+//--- obstacle: framed windmill (square window, spinning arms fill it) -------
+function windmill(L, z, cy, r, speed, phase, arms){
+  const s = r*0.70, VS = 2.6, thick = 3;
+  for(let x=-CORRIDOR; x<=CORRIDOR; x+=VS){
+    for(let y=GROUND_Y+VS/2; y<=CEIL; y+=VS){
+      if(Math.abs(x) < s && Math.abs(y-cy) < s) continue;
+      const edge = Math.abs(x) < s+VS && Math.abs(y-cy) < s+VS;
+      L.vox(x, y, z, VS*0.95, VS*0.95, thick, edge?PAL.hazardA:PAL.metal, edge?0.10:0.20);
+    }
+  }
+  const top = CEIL+4, C = CORRIDOR+4;
+  L.col(-(C+s)/2, top/2, z, (C-s)/2, top/2, thick/2);
+  L.col( (C+s)/2, top/2, z, (C-s)/2, top/2, thick/2);
+  const by = cy-s, ay = cy+s;
+  if(by > 0)   L.col(0, by/2, z, s, by/2, thick/2);
+  if(ay < top) L.col(0, (ay+top)/2, z, s, (top-ay)/2, thick/2);
+  return new SpinBar(z, cy, r, speed, phase, arms).push(L, true);
+}
+
+//--- obstacle: pillars ------------------------------------------------------
+function pillar(L, x, z, w, h, col){
+  for(let y=GROUND_Y; y<GROUND_Y+h; y+=2.6)
+    L.vox(x, y, z, w, 2.5, w, (((y/2.6)|0)&1)?PAL.hazardA:(col||PAL.hazardB), 0.12);
+  L.col(x, GROUND_Y+h/2, z, w/2, h/2, w/2);
+}
+
+//=============================================================================
+// dynamic obstacles
+//=============================================================================
+// windmill: N arms turning around a hub -- fly through the gap between arms
+class SpinBar {
+  constructor(z, y, radius, speed, phase, arms){
+    this.z=z; this.y=y; this.r=radius; this.speed=speed; this.a=phase||0;
+    this.arms=arms||3; this.R=new Float32Array(9);
+  }
+  update(dt){ this.a += this.speed*dt; }
+  angleAt(t){ return this.a + this.speed*t; }
+  draw(){
+    for(let k=0;k<this.arms;k++){
+      const ang = this.a + k*2*Math.PI/this.arms;
+      eulerR(this.R, 0, 0, ang);
+      const n=6, step=this.r/n, ca=Math.cos(ang), sa=Math.sin(ang);
+      for(let i=0;i<n;i++){
+        const d=(i+0.5)*step;
+        dpush(this.R, ca*d, this.y+sa*d, this.z, step*0.95, 1.8, 1.8, (i&1)?PAL.hazardA:PAL.hazardB);
+      }
+      dpush(this.R, ca*this.r, this.y+sa*this.r, this.z, 2.4, 2.4, 2.4, PAL.rust);
+    }
+    dpush(IDR, 0, this.y, this.z, 3.2, 3.2, 3.4, PAL.metalDark);
+  }
+  hit(p, r){
+    const dx=p.x, dy=p.y-this.y, dz=p.z-this.z;
+    if(Math.abs(dz) > 2.2+r) return false;
+    if(dx*dx+dy*dy < (1.9+r)*(1.9+r)) return true;             // hub
+    if(dx*dx+dy*dy > (this.r+1+r)*(this.r+1+r)) return false;   // outside the sweep
+    for(let k=0;k<this.arms;k++){
+      const ang=this.a + k*2*Math.PI/this.arms;
+      const c=Math.cos(ang), s=Math.sin(ang);
+      const lx = dx*c + dy*s, ly = -dx*s + dy*c;
+      if(obbHit(lx-this.r/2, ly, dz, this.r/2, 0.95, 1.0, r)) return true;
+    }
+    return false;
+  }
+}
+class Car {
+  constructor(z, y, dir, speed, col, offset){
+    this.z=z; this.y=y; this.dir=dir; this.speed=speed; this.col=col||PAL.carRed;
+    this.x = dir>0 ? -34 + (offset||0) : 34 - (offset||0);
+  }
+  update(dt){
+    this.x += this.dir*this.speed*dt;
+    if(this.x >  36) this.x = -36;
+    if(this.x < -36) this.x =  36;
+  }
+  draw(){
+    const x=this.x, y=this.y, z=this.z;
+    dpush(IDR, x, y+0.9, z, 6.4, 1.6, 3.2, this.col);
+    dpush(IDR, x-this.dir*0.6, y+2.2, z, 3.4, 1.5, 2.9, this.col);
+    dpush(IDR, x-this.dir*0.6, y+2.25, z-1.5, 3.0, 1.1, 0.3, PAL.glass);
+    dpush(IDR, x-this.dir*0.6, y+2.25, z+1.5, 3.0, 1.1, 0.3, PAL.glass);
+    dpush(IDR, x+this.dir*3.1, y+1.1, z, 0.5, 0.9, 2.6, PAL.glassLit);
+    for(const sx of [-2,2]) for(const sz of [-1.5,1.5])
+      dpush(IDR, x+sx, y+0.3, z+sz, 1.3, 1.3, 0.7, PAL.asphalt);
+  }
+  hit(p,r){ return obbHit(p.x-this.x, p.y-(this.y+1.4), p.z-this.z, 3.3, 1.6, 1.7, r); }
+}
+// full-height panel sliding left/right -- squeeze past on one side
+class SlideWall {
+  constructor(z, w, amp, speed, phase){
+    this.z=z; this.w=w; this.h=CEIL+6; this.y=(CEIL+6)/2;
+    this.amp=amp; this.speed=speed; this.t=phase||0; this.x=Math.sin(this.t)*amp;
+  }
+  update(dt){ this.t += dt*this.speed; this.x = Math.sin(this.t)*this.amp; }
+  xAt(t){ return Math.sin(this.t + t*this.speed)*this.amp; }
+  draw(){
+    for(let xx=-this.w/2; xx<this.w/2; xx+=2.6)
+      for(let yy=-this.h/2; yy<this.h/2; yy+=2.6)
+        dpush(IDR, this.x+xx+1.3, this.y+yy+1.3, this.z, 2.5, 2.5, 2.8,
+              (((xx+yy)/2.6)|0)&1 ? PAL.metal : PAL.metalDark);
+    for(let yy=-this.h/2; yy<this.h/2; yy+=5.2){
+      dpush(IDR, this.x-this.w/2-0.4, this.y+yy+1.3, this.z, 1.2, 4.4, 3.2, PAL.hazardA);
+      dpush(IDR, this.x+this.w/2+0.4, this.y+yy+1.3, this.z, 1.2, 4.4, 3.2, PAL.hazardA);
+    }
+  }
+  hit(p,r){ return obbHit(p.x-this.x, p.y-this.y, p.z-this.z, this.w/2, this.h/2, 1.5, r); }
+}
+// wide slab bobbing up and down -- go over the top or duck underneath
+class Lifter {
+  constructor(z, h, amp, speed, phase){
+    this.z=z; this.x=0; this.w=CORRIDOR*2+6; this.h=h; this.amp=amp; this.speed=speed; this.t=phase||0;
+    this.base = GROUND_Y + 6 + amp + h/2; this.y = this.base;
+  }
+  update(dt){ this.t += dt*this.speed; this.y = this.base + Math.sin(this.t)*this.amp; }
+  yAt(t){ return this.base + Math.sin(this.t + t*this.speed)*this.amp; }
+  draw(){
+    for(let xx=-this.w/2; xx<this.w/2; xx+=2.6)
+      for(let yy=-this.h/2; yy<this.h/2; yy+=2.6)
+        dpush(IDR, this.x+xx+1.3, this.y+yy+1.3, this.z, 2.5, 2.5, 2.8,
+              (((xx+yy)/2.6)|0)&1 ? PAL.rust : PAL.brickDark);
+    for(let xx=-this.w/2; xx<this.w/2; xx+=5.2){
+      dpush(IDR, this.x+xx+1.3, this.y-this.h/2-0.4, this.z, 4.4, 1.2, 3.2, PAL.hazardA);
+      dpush(IDR, this.x+xx+1.3, this.y+this.h/2+0.4, this.z, 4.4, 1.2, 3.2, PAL.hazardA);
+    }
+  }
+  hit(p,r){ return obbHit(p.x-this.x, p.y-this.y, p.z-this.z, this.w/2, this.h/2, 1.5, r); }
+}
+function obbHit(dx,dy,dz, hx,hy,hz, r){
+  const cx = Math.max(Math.abs(dx)-hx, 0), cy = Math.max(Math.abs(dy)-hy, 0), cz = Math.max(Math.abs(dz)-hz, 0);
+  return cx*cx+cy*cy+cz*cz < r*r;
+}
+
+//=============================================================================
+// level definitions
+//=============================================================================
+const LEVELS = [
+  { name:'LEVEL 1 — SUBURB RUN', hint:'Through the holes in the walls, then hit the bullseye.',
+    len:400, seed:11, sky:[hex(0x66c2ff), hex(0xcfeaff)], fogCol:hex(0xcfeaff), groundCol:PAL.grass,
+    build(L){
+      buildGround(L); scenery(L, -20, L.len+60);
+      wall(L, 95,  0, 12, 18, 14);
+      L.coinRun(0,12,60, 0,12,90, 4);
+      new Car(125, GROUND_Y, 1, 14, PAL.carRed).push(L);
+      wall(L, 175, -6, 11, 16, 13);
+      new Car(205, GROUND_Y,-1, 16, PAL.carBlue).push(L);
+      new Car(212, GROUND_Y, 1, 12, PAL.carWhite, 20).push(L);
+      wall(L, 255, 7, 14, 16, 13);
+      L.coinRun(-6,12,192, 7,14,248, 6);
+      pillar(L, -5, 285, 3, 22);
+      wall(L, 335, -3, 18, 16, 12);
+      new Car(365, GROUND_Y, 1, 20, PAL.carGreen).push(L);
+      L.coinRun(-3,16,350, 0,14,385, 5);
+      endTarget(L, 0, 14, 9);
+    } },
+
+  { name:'LEVEL 2 — DOWNTOWN', hint:'Weave between the towers, then squeeze past the barrier.',
+    len:505, seed:27, sky:[hex(0x2b4a7a), hex(0xff9a5c)], fogCol:hex(0xff9a5c), groundCol:hex(0x59606b),
+    build(L){
+      buildGround(L); scenery(L, -20, L.len+60);
+      buildingRow(L, 85,  -5, 15);
+      buildingRow(L, 150,  6, 14);
+      ceilingBlock(L, 150, 6, 14, 25);
+      wall(L, 215, -3, 15, 17, 13, PAL.concrete2);
+      L.coinRun(6,13,160, -3,15,205, 6);
+      new Car(245, GROUND_Y, 1, 18, PAL.carWhite).push(L);
+      buildingRow(L, 280, 7, 14);
+      new SlideWall(335, 16, 9, 1.0, 0).push(L, true);
+      buildingRow(L, 390, -6, 14);
+      L.coinRun(-6,14,370, -6,14,410, 5);
+      wall(L, 445, 2, 17, 17, 12, PAL.concrete2);
+      endTarget(L, 0, 14, 9);
+    } },
+
+  { name:'LEVEL 3 — CONSTRUCTION SITE', hint:'Windmills. Aim for the gap between the arms.',
+    len:585, seed:41, sky:[hex(0x1d2233), hex(0x7f5ad6)], fogCol:hex(0x7f5ad6), groundCol:PAL.sand,
+    build(L){
+      buildGround(L); scenery(L, -20, L.len+60);
+      windmill(L, 95, 15, 15, 1.3, 0);
+      pillar(L, -13, 135, 3.4, 30); pillar(L, 13, 135, 3.4, 30);
+      windmill(L, 175, 14, 16, -1.6, 1.1);
+      wall(L, 235, 4, 15, 17, 13, PAL.rust);
+      L.coinRun(4,15,215, 4,15,255, 5);
+      windmill(L, 295, 15, 16, 1.9, 0.4);
+      new Lifter(350, 12, 7, 1.2, 0).push(L, true);
+      L.coinArc(0, 20, 350, 9, -1.0, 1.0, 7, true);
+      windmill(L, 410, 14, 17, -1.9, 2.0);
+      wall(L, 470, -4, 15, 17, 12, PAL.rust);
+      windmill(L, 525, 15, 16, 1.9, 1.4);
+      endTarget(L, 0, 14, 9);
+    } },
+
+  { name:'LEVEL 4 — HIGHWAY HELL', hint:'Rush hour: traffic, sliding barriers and windmills.',
+    len:620, seed:63, sky:[hex(0x14161f), hex(0xd9455f)], fogCol:hex(0xd9455f), groundCol:hex(0x4a4a52),
+    build(L){
+      buildGround(L); scenery(L, -20, L.len+60);
+      for(let i=0;i<4;i++) new Car(70+i*10, GROUND_Y, i&1?1:-1, 20+i*3,
+        [PAL.carRed,PAL.carBlue,PAL.carGreen,PAL.carWhite][i], i*12).push(L);
+      wall(L, 140, 0, 14, 16, 13, PAL.metalDark);
+      L.coinRun(0,6,70, 0,6,105, 5);
+      new SlideWall(195, 18, 10, 1.3, 0).push(L, true);
+      windmill(L, 250, 14, 16, 1.8, 0.6);
+      for(let i=0;i<4;i++) new Car(288+i*9, GROUND_Y, i&1?-1:1, 24+i*2,
+        [PAL.carWhite,PAL.carRed,PAL.carBlue,PAL.carGreen][i], i*15).push(L);
+      buildingRow(L, 340, 7, 13);
+      L.coinRun(7,14,320, 7,14,360, 5);
+      new Lifter(395, 12, 8, 1.5, 0).push(L, true);
+      windmill(L, 450, 15, 17, -2.0, 1.2);
+      new SlideWall(505, 18, 11, 1.6, 2).push(L, true);
+      wall(L, 560, 5, 14, 16, 12, PAL.metalDark);
+      endTarget(L, 0, 14, 9);
+    } },
+
+  { name:'LEVEL 5 — MEGACITY FINALE', hint:'Everything at once. Good luck, pilot.',
+    len:690, seed:99, sky:[hex(0x0a0c18), hex(0x2ad6c8)], fogCol:hex(0x123a44), groundCol:hex(0x2c2f38),
+    build(L){
+      buildGround(L); scenery(L, -20, L.len+60);
+      buildingRow(L, 80, -7, 13); ceilingBlock(L, 80, -7, 13, 24);
+      windmill(L, 150, 14, 16, 1.8, 0);
+      new Car(175, GROUND_Y, 1, 26, PAL.carRed).push(L);
+      new Car(182, GROUND_Y,-1, 30, PAL.carBlue, 14).push(L);
+      wall(L, 215, 6, 14, 15, 13, PAL.neon);
+      L.coinRun(6,14,195, 6,14,235, 5);
+      new SlideWall(270, 18, 11, 1.5, 1).push(L, true);
+      windmill(L, 325, 15, 17, -2.0, 0.9);
+      buildingRow(L, 385, 6, 12); ceilingBlock(L, 385, 6, 12, 23);
+      L.coinRun(6,13,365, 6,13,405, 5);
+      new Lifter(440, 12, 8, 1.8, 0).push(L, true);
+      windmill(L, 495, 14, 17, 2.1, 2.2);
+      wall(L, 550, -6, 15, 15, 12, PAL.neon);
+      for(let i=0;i<3;i++) new Car(585+i*9, GROUND_Y, i&1?-1:1, 30, PAL.carWhite, i*13).push(L);
+      new SlideWall(630, 20, 12, 1.8, 0.5).push(L, true);
+      endTarget(L, 0, 14, 10);   // finale: slightly bigger target
+    } },
+
+  { name:'LEVEL 6 — REFINERY', hint:'Tanks and stacks. The coins mark the safe line.',
+    len:640, seed:131, sky:[hex(0x3a2418), hex(0xe8a24a)], fogCol:hex(0xc98a4a), groundCol:hex(0x6b6154),
+    build(L){
+      buildGround(L); scenery(L, -20, L.len+60);
+      wall(L, 90, 0, 13, 17, 13, PAL.rust);
+      L.coinRun(0,13,60, 0,13,120, 7);
+      new Lifter(150, 12, 8, 1.3, 0).push(L, true);
+      L.coinArc(0, 22, 150, 9, -0.9, 0.9, 6, true);
+      pillar(L, -11, 200, 4, 28); pillar(L, 11, 200, 4, 28);
+      L.coinRun(0,15,185, 0,15,215, 4);
+      windmill(L, 255, 15, 16, 1.7, 0.5);
+      wall(L, 320, -8, 12, 15, 13, PAL.rust);
+      L.coinRun(-8,12,300, -8,12,340, 5);
+      new SlideWall(380, 17, 10, 1.4, 1.2).push(L, true);
+      windmill(L, 440, 14, 17, -1.9, 1.8);
+      buildingRow(L, 500, 7, 13);
+      L.coinRun(7,14,480, 7,14,520, 5);
+      new Lifter(555, 13, 9, 1.6, 2.4).push(L, true);
+      wall(L, 605, 5, 14, 15, 12, PAL.rust);
+      endTarget(L, 0, 14, 9);
+    } },
+
+  { name:'LEVEL 7 — THE CANYON', hint:'Tight rock gates. Bank hard and keep the streak alive.',
+    len:660, seed:157, sky:[hex(0x8c4a2a), hex(0xf0c98a)], fogCol:hex(0xd9a06a), groundCol:PAL.sand,
+    build(L){
+      buildGround(L); scenery(L, -20, L.len+60);
+      wall(L, 85, -9, 13, 13, 12, PAL.sand);
+      L.coinRun(-9,13,62, -9,13,86, 4);
+      wall(L, 150, 6, 15, 13, 12, PAL.sand);
+      L.coinRun(-9,13,92, 6,15,146, 6);
+      windmill(L, 215, 14, 16, 2.0, 1.1);
+      wall(L, 280, -7, 13, 13, 12, PAL.sand);
+      L.coinRun(0,14,228, -7,13,272, 6);
+      new Lifter(340, 12, 9, 1.5, 0).push(L, true);
+      L.coinArc(0, 21, 340, 9, -1.0, 1.0, 7, true);
+      wall(L, 405, 8, 16, 13, 12, PAL.sand);
+      pillar(L, -3, 455, 4, 30);
+      L.coinRun(8,16,385, 8,16,430, 5);
+      windmill(L, 500, 15, 17, -2.1, 0.4);
+      wall(L, 565, -8, 14, 13, 12, PAL.sand);
+      L.coinRun(-8,14,545, -8,14,585, 5);
+      new SlideWall(620, 18, 11, 1.7, 0.8).push(L, true);
+      endTarget(L, 0, 14, 9);
+    } },
+
+  { name:'LEVEL 8 — THE YARDS', hint:'Traffic everywhere. Low coins are worth the risk.',
+    len:680, seed:181, sky:[hex(0x1a2430), hex(0x7fa8c8)], fogCol:hex(0x7fa8c8), groundCol:hex(0x4d5058),
+    build(L){
+      buildGround(L); scenery(L, -20, L.len+60);
+      for(let i=0;i<5;i++) new Car(70+i*9, GROUND_Y, i&1?1:-1, 22+i*3,
+        [PAL.carRed,PAL.carBlue,PAL.carGreen,PAL.carWhite,PAL.carRed][i], i*11).push(L);
+      L.coinRun(0,6,70, 0,6,110, 6);                    // low and dangerous
+      wall(L, 145, 0, 13, 15, 13, PAL.metalDark);
+      new SlideWall(200, 18, 10, 1.5, 0).push(L, true);
+      L.coinRun(0,19,222, 0,19,252, 5);
+      windmill(L, 260, 14, 16, 1.9, 1.4);
+      for(let i=0;i<5;i++) new Car(305+i*8, GROUND_Y, i&1?-1:1, 26+i*2,
+        [PAL.carWhite,PAL.carRed,PAL.carBlue,PAL.carGreen,PAL.carWhite][i], i*13).push(L);
+      L.coinRun(0,5,305, 0,5,345, 6);
+      buildingRow(L, 395, -7, 13); ceilingBlock(L, 395, -7, 13, 24);
+      L.coinRun(-7,13,375, -7,13,415, 5);
+      new Lifter(455, 13, 9, 1.7, 1.1).push(L, true);
+      windmill(L, 515, 15, 17, -2.2, 2.0);
+      wall(L, 575, 7, 13, 14, 12, PAL.metalDark);
+      L.coinRun(7,14,555, 7,14,595, 5);
+      new SlideWall(630, 19, 11, 1.8, 2.2).push(L, true);
+      endTarget(L, 0, 14, 9);
+    } },
+
+  { name:'LEVEL 9 — NIGHT SHIFT', hint:'Dark and fast. Follow the coins, they light the way.',
+    len:700, seed:211, sky:[hex(0x05070f), hex(0x2b1f5e)], fogCol:hex(0x140f2e), groundCol:hex(0x22242c),
+    build(L){
+      buildGround(L); scenery(L, -20, L.len+60);
+      buildingRow(L, 80, 8, 12); ceilingBlock(L, 80, 8, 12, 23);
+      L.coinRun(8,13,60, 8,13,100, 5);
+      windmill(L, 140, 14, 16, 2.2, 0);
+      L.coinArc(0, 14, 140, 10, 0.5, 2.6, 7, true);
+      wall(L, 200, -8, 12, 14, 13, PAL.neon);
+      new SlideWall(255, 19, 11, 1.7, 1.5).push(L, true);
+      windmill(L, 315, 15, 17, -2.3, 0.7);
+      L.coinRun(0,26,300, 0,26,335, 5);
+      new Lifter(375, 13, 9, 1.9, 0).push(L, true);
+      buildingRow(L, 435, -6, 12); ceilingBlock(L, 435, -6, 12, 22);
+      L.coinRun(-6,13,415, -6,13,455, 5);
+      windmill(L, 495, 14, 17, 2.4, 1.9);
+      for(let i=0;i<4;i++) new Car(540+i*9, GROUND_Y, i&1?1:-1, 30, PAL.carWhite, i*12).push(L);
+      wall(L, 595, 7, 12, 14, 12, PAL.neon);
+      L.coinRun(7,14,575, 7,14,615, 5);
+      new SlideWall(650, 20, 12, 1.9, 0.3).push(L, true);
+      endTarget(L, 0, 14, 9);
+    } },
+
+  { name:'LEVEL 10 — TERMINAL VELOCITY', hint:'The last run. Everything, back to back.',
+    len:760, seed:239, sky:[hex(0x0a0410), hex(0xff5a3c)], fogCol:hex(0x3a1020), groundCol:hex(0x1e1a22),
+    build(L){
+      buildGround(L); scenery(L, -20, L.len+60);
+      windmill(L, 85, 14, 16, 2.3, 0);
+      L.coinArc(0, 14, 85, 10, -2.6, -0.5, 7, true);
+      wall(L, 145, 8, 12, 14, 13, PAL.neon);
+      new SlideWall(200, 19, 11, 1.8, 1.0).push(L, true);
+      L.coinRun(0,19,222, 0,19,250, 5);
+      windmill(L, 260, 15, 17, -2.4, 1.6);
+      buildingRow(L, 320, -8, 12); ceilingBlock(L, 320, -8, 12, 22);
+      L.coinRun(-8,13,300, -8,13,340, 5);
+      new Lifter(380, 13, 9, 2.0, 0.5).push(L, true);
+      for(let i=0;i<5;i++) new Car(425+i*8, GROUND_Y, i&1?-1:1, 30, PAL.carRed, i*11).push(L);
+      L.coinRun(0,5,425, 0,5,465, 6);
+      windmill(L, 495, 14, 17, 2.5, 2.1);
+      wall(L, 555, -7, 12, 14, 12, PAL.neon);
+      new SlideWall(610, 20, 12, 2.0, 1.8).push(L, true);
+      L.coinRun(0,19,630, 0,19,660, 5);
+      windmill(L, 670, 15, 17, -2.5, 0.9);
+      new Lifter(720, 13, 9, 2.1, 1.4).push(L, true);
+      endTarget(L, 0, 14, 10);
+    } },
+];
+// tiny helper so level scripts read nicely
+for(const C of [SpinBar, Car, SlideWall, Lifter])
+  C.prototype.push = function(L, isGate){
+    L.dyn.push(this);
+    if(isGate){ L.gate(this.z, 0, this.y||12); L.gates[L.gates.length-1].obj = this; }
+    return this;
+  };
+
+//=============================================================================
+// GAME
+//=============================================================================
+const ST = { INTRO:0, READY:1, LAUNCH:2, FLY:3, DEAD:4, CLEAR:5, WIN:6, OVER:7 };
+const G = {
+  state: ST.INTRO, level:0, score:0, lives:3,
+  t:0, stateT:0, shake:0,
+  L:null,
+  pos:V3(), vel:V3(), yaw:0, pitch:0, roll:0, fuel:100, thrusting:false, rocketGone:false,
+  invertPitch:true,   // true = pull back to climb (flight-stick). Toggled on the title screen.
+  imageTarget:false,  // hidden: 7 taps on the title unlocks the picture target
+  coins:0, combo:0, comboT:0,   // pickups this run, and the streak multiplier
+  fuelMax:30,
+  cheated:false,                // any cheat used = not submittable
+  runTicks:0,                   // 60ths of a second spent playing this run
+  submit:{ state:'idle', msg:'' },
+  launchAngle:0.62, launchT:0,
+  cam:V3(0,8,-30), camLook:V3(), camInit:false,
+  parts:[],
+};
+const RAMP = V3(0, 2.6, -14);
+const R_ROCKET = new Float32Array(9);
+const tmp = V3();
+
+const keys = {};
+const KEYMAP = {ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',Space:'fire',
+                KeyW:'up',KeyS:'down',KeyA:'left',KeyD:'right',KeyR:'restart',Enter:'fire'};
+addEventListener('keydown', e=>{
+  if(e.target && e.target.tagName === 'INPUT') return;
+  const k = KEYMAP[e.code]; if(k){ e.preventDefault(); keys[k]=true; }
+});
+addEventListener('keyup', e=>{ if(e.target && e.target.tagName === 'INPUT') return;
+  const k = KEYMAP[e.code]; if(k){ e.preventDefault(); keys[k]=false; } });
+// pitch direction is a preference, remembered between sessions
+try { const v = localStorage.getItem('rb3d.invertPitch'); if(v !== null) G.invertPitch = v === '1'; } catch(_){}
+try { G.imageTarget = localStorage.getItem('rb3d.imageTarget') === '1'; } catch(_){}
+
+// Hidden: seven taps on the title. Deliberately silent -- taps are swallowed and
+// nothing acknowledges them until the seventh, which announces itself.
+let titleTaps = 0, titleLast = 0;
+function titleTap(e){
+  e.stopPropagation();
+  const t = performance.now();
+  if(t - titleLast > 2000) titleTaps = 0;    // lost interest -- start over
+  titleLast = t;
+  if(++titleTaps < 7) return;
+  titleTaps = 0;
+  G.imageTarget = !G.imageTarget;
+  try { localStorage.setItem('rb3d.imageTarget', G.imageTarget ? '1' : '0'); } catch(_){}
+  audioInit();
+  showBanner('SECRET UNLOCKED',
+             G.imageTarget ? 'IMAGE TARGET ENABLED' : 'IMAGE TARGET DISABLED', G.imageTarget);
+  if(G.imageTarget){
+    beep(523,0.08,'square',0.09);
+    setTimeout(()=>beep(784,0.08,'square',0.09), 90);
+    setTimeout(()=>beep(1047,0.22,'square',0.09), 180);
+  } else {
+    beep(440,0.10,'square',0.08);
+    setTimeout(()=>beep(294,0.20,'square',0.08), 110);
+  }
+}
+function togglePitchInvert(){
+  G.invertPitch = !G.invertPitch;
+  try { localStorage.setItem('rb3d.invertPitch', G.invertPitch ? '1' : '0'); } catch(_){}
+  audioInit(); beep(G.invertPitch ? 660 : 440, 0.09, 'square', 0.08);
+  elMsg.dataset.h = '';        // force the title screen to redraw with the new label
+}
+
+const onPad = e => !!(e.target && e.target.closest && e.target.closest('#touch'));
+addEventListener('pointerdown', e=>{ if(onPad(e)) return; keys.fire=true; });
+addEventListener('pointerup',   e=>{ if(onPad(e)) return; keys.fire=false; });
+
+//------------------------------------------------- touch controls -----------
+// Each button captures its own pointer, so thrust + steer work at the same time.
+// The pad mirrors the arrow keys exactly, inverted pitch included: the up button
+// drops the nose, the down button raises it -- pull back to climb.
+const isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+for(const el of document.querySelectorAll('#touch .tbtn')){
+  const k = el.dataset.k;
+  const press = e => {
+    e.preventDefault(); e.stopPropagation();
+    keys[k] = true; el.classList.add('on');
+    try { el.setPointerCapture(e.pointerId); } catch(_){}
+  };
+  const release = e => {
+    if(e){ e.preventDefault(); e.stopPropagation(); }
+    keys[k] = false; el.classList.remove('on');
+  };
+  el.addEventListener('pointerdown', press);
+  el.addEventListener('pointerup', release);
+  el.addEventListener('pointercancel', release);
+  el.addEventListener('lostpointercapture', release);
+  el.addEventListener('contextmenu', e=>e.preventDefault());
+}
+if(isTouch) document.body.classList.add('touch');
+addEventListener('touchstart', ()=>document.body.classList.add('touch'), {once:true, passive:true});
+
+//------------------------------------------------- cheats -------------------
+// Type them any time, GTA style. Both toggle, and both stick for the session.
+// Neither spells a letter bound to flying (W/A/S/D/R) so you can enter them mid-air.
+const CHEATS = {
+  TOPITOFF: { flag:'fuel',    on:'UNLIMITED FUEL',    off:'FUEL BURNS AGAIN' },
+  PHOENIX:  { flag:'rockets', on:'UNLIMITED ROCKETS', off:'ROCKETS ARE MORTAL' },
+};
+const cheat = { fuel:false, rockets:false };
+
+let bannerT = null;
+function showBanner(title, text, ok){
+  const el = document.getElementById('cheatBanner');
+  el.innerHTML = '<span class="cb-t">' + title + '</span>' + text;
+  el.classList.toggle('off', !ok);
+  el.classList.add('show');
+  clearTimeout(bannerT);
+  bannerT = setTimeout(()=>el.classList.remove('show'), 2600);
+}
+function cheatBanner(code, on){
+  showBanner('CHEAT ' + (on ? 'ACTIVATED' : 'DEACTIVATED'),
+             on ? CHEATS[code].on : CHEATS[code].off, on);
+}
+function applyCheat(code){            // queue it -- stepFromMask does the work
+  const c = CHEATS[code]; if(!c) return;
+  pendingCheat |= CHEAT_BIT[c.flag];
+}
+function toggleCheat(code){
+  const c = CHEATS[code]; if(!c) return;
+  const on = cheat[c.flag] = !cheat[c.flag];
+  if(on) G.cheated = true;
+  audioInit();
+  cheatBanner(code, on);
+  if(on){
+    beep(523,0.08,'square',0.09);
+    setTimeout(()=>beep(659,0.08,'square',0.09), 90);
+    setTimeout(()=>beep(1047,0.20,'square',0.09), 180);
+  } else {
+    beep(392,0.10,'square',0.08);
+    setTimeout(()=>beep(262,0.22,'square',0.08), 110);
+  }
+}
+// typed, GTA style
+let cheatBuf = '';
+addEventListener('keydown', e=>{
+  if(e.target && e.target.tagName === 'INPUT') return;
+  if(!e.key || e.key.length !== 1 || !/[a-z]/i.test(e.key)) return;
+  cheatBuf = (cheatBuf + e.key.toUpperCase()).slice(-16);
+  for(const code in CHEATS)
+    if(cheatBuf.endsWith(code)){ cheatBuf = ''; applyCheat(code); }
+});
+// tapped, for phones with no keyboard: 5 quick taps on a HUD panel.
+// The panel border blinks from the second tap on, so you can tell it registered
+// without the count being obvious to someone who isn't looking for it.
+const TAP_CHEATS = { hudL:'TOPITOFF', hudR:'PHOENIX' };
+for(const id in TAP_CHEATS){
+  const el = document.getElementById(id);
+  let n = 0, last = 0;
+  el.addEventListener('pointerdown', e=>{
+    e.stopPropagation();                       // HUD boxes never fire the engine,
+    const t = performance.now();               // so a cheat can't launch you by accident
+    if(t - last > 1200) n = 0;                 // too slow -- start the count over
+    last = t; n++;
+    if(n >= 5){ n = 0; applyCheat(TAP_CHEATS[id]); return; }
+    if(n >= 2){ el.classList.add('tapped'); setTimeout(()=>el.classList.remove('tapped'), 110); }
+  });
+}
+
+//------------------------------------------------- deterministic tick -------
+// One simulation step. Key *edges* are derived here rather than from DOM events,
+// so the whole run is a pure function of the per-tick input mask -- which is what
+// lets the server replay a submitted run and check the score for itself.
+const INPUT_BITS = [['up',1], ['down',2], ['left',4], ['right',8], ['fire',16], ['restart',32]];
+const CHEAT_BIT = { fuel:64, rockets:128 };   // cheats ride in the input stream too,
+let pendingCheat = 0;                          // so the server's replay sees them
+const prevKeys = {};
+const REC = { runs:[], mask:-1, count:0, ticks:0, recording:false };
+
+function inputMask(){
+  let m = pendingCheat; pendingCheat = 0;
+  for(const [k, bit] of INPUT_BITS) if(keys[k]) m |= bit;
+  return m;
+}
+function recordTick(m){
+  if(!REC.recording) return;
+  REC.ticks++;
+  if(m === REC.mask && REC.count < 65535){ REC.count++; return; }
+  if(REC.mask >= 0) REC.runs.push(REC.mask, REC.count);   // run-length: inputs rarely change
+  REC.mask = m; REC.count = 1;
+}
+function recordReset(){ REC.runs = []; REC.mask = -1; REC.count = 0; REC.ticks = 0; REC.recording = true; }
+function recordFlush(){ if(REC.mask >= 0){ REC.runs.push(REC.mask, REC.count); REC.mask = -1; REC.count = 0; } }
+
+// Point this at a backend to enable submissions. Left empty, the game still
+// builds the payload so it can be inspected or verified offline.
+const LEADERBOARD_API = 'https://rocket-blast-leaderboard.majdianmahdi.workers.dev';
+
+// Fuel economy, in one place. The tank is 100 and never refills with time.
+// A gate-to-gate leg measures at ~1.3s of engine (tools/tune-fuel.js), so a gate
+// refunds exactly that: arrive at a wall on fumes and you can still reach the next
+// one. Anything beyond the critical path -- coin detours, long legs, doubling back --
+// comes out of what you have left.
+const FUEL_BURN = 9;                                  // per second of engine
+const GATE_FUEL = Math.round(FUEL_BURN * 1.3);        // one typical leg
+const COIN_FUEL = 1;
+// Starting tank. Measured net need per level (burn minus refunds) is only 7-21,
+// because gates refund most of the burn -- so what the tank really has to cover is
+// the launch-to-first-gate leg plus a margin for mistakes. Levels can override it
+// with `fuel:` in their config, though the measurements do not justify varying it.
+const START_FUEL = 30;
+const BUILD = 'rb3d-7';         // bump whenever physics change; the server refuses stale replays
+
+function encodeReplay(){
+  const runs = REC.runs.slice();
+  if(REC.mask >= 0) runs.push(REC.mask, REC.count);   // pending run, without disturbing it
+  const n = runs.length / 2, b = new Uint8Array(n * 3);
+  for(let i=0;i<n;i++){
+    b[i*3] = runs[i*2];
+    const c = runs[i*2+1];
+    b[i*3+1] = c & 255; b[i*3+2] = (c >> 8) & 255;
+  }
+  let s = '';
+  for(let i=0;i<b.length;i++) s += String.fromCharCode(b[i]);
+  return btoa(s);
+}
+function buildSubmission(name){
+  return {
+    v: 1, build: BUILD,
+    name: String(name).slice(0, 16),
+    score: G.score, coins: G.coins,
+    ticks: G.runTicks, levels: LEVELS.length,
+    inv: G.invertPitch,                 // controls affect the sim, so the replay needs it
+    replay: encodeReplay(),
+  };
+}
+let topScores = null, topFetched = false;
+async function fetchTop(){
+  if(!LEADERBOARD_API || topFetched) return;
+  topFetched = true;
+  try {
+    const r = await fetch(LEADERBOARD_API + '/top?n=10');
+    const j = await r.json();
+    topScores = j.top || [];
+  } catch(_){ topScores = 'error'; }
+  elMsg.dataset.h = '';
+}
+function topTable(limit){
+  if(!LEADERBOARD_API) return '';
+  if(topScores === 'error') return `<p class="dim" style="margin-top:10px">leaderboard unavailable</p>`;
+  if(!topScores) return `<p class="dim" style="margin-top:10px">loading records…</p>`;
+  if(!topScores.length) return `<p class="dim" style="margin-top:10px">no records yet — be the first</p>`;
+  const rows = topScores.slice(0, limit || 10).map((r,i)=>
+    `<tr><td class="hl">${i+1}</td><td>${String(r.name).replace(/[<>&]/g,'')}</td>` +
+    `<td class="hl">${r.score}</td><td class="dim">${fmtTime(r.ticks/60)}</td></tr>`).join('');
+  return `<table id="topTbl"><tr><th></th><th>PILOT</th><th>SCORE</th><th>TIME</th></tr>${rows}</table>`;
+}
+async function submitRecord(){
+  if(G.cheated) return;
+  const el = document.getElementById('subName');
+  const name = ((el && el.value) || '').trim().toUpperCase() || 'ANON';
+  const payload = buildSubmission(name);
+  window.__lastSubmission = payload;          // inspectable / verifiable offline
+  if(!LEADERBOARD_API){
+    G.submit = { state:'error', msg:'no leaderboard server configured yet (see LEADERBOARD_API)' };
+    elMsg.dataset.h = ''; return;
+  }
+  G.submit = { state:'sending', msg:'' }; elMsg.dataset.h = '';
+  try {
+    const r = await fetch(LEADERBOARD_API + '/score', {
+      method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(payload) });
+    const j = await r.json().catch(()=>({}));
+    if(r.ok){ topFetched = false; fetchTop(); }
+    G.submit = r.ok ? { state:'done', msg:'RECORD SUBMITTED' + (j.rank ? '  —  RANK #' + j.rank : '') }
+                    : { state:'error', msg: j.error || ('rejected (' + r.status + ')') };
+  } catch(err){
+    G.submit = { state:'error', msg:'could not reach the leaderboard' };
+  }
+  elMsg.dataset.h = '';
+}
+function fmtTime(sec){
+  const m = Math.floor(sec/60), s = sec - m*60;
+  return m + ':' + (s < 10 ? '0' : '') + s.toFixed(2);
+}
+
+// Advances one tick from an input mask. The game calls it live; the leaderboard
+// server calls it to replay a submission. Sharing it is what keeps them identical.
+function stepFromMask(m){
+  for(const [k, bit] of INPUT_BITS) keys[k] = (m & bit) !== 0;
+  for(const [k] of INPUT_BITS){
+    if(keys[k] && !prevKeys[k]) keyPressed(k);
+    prevKeys[k] = !!keys[k];
+  }
+  if(m & CHEAT_BIT.fuel)    toggleCheat('TOPITOFF');
+  if(m & CHEAT_BIT.rockets) toggleCheat('PHOENIX');
+  // run clock: every tick spent actually playing, retries included
+  if(G.state !== ST.INTRO && G.state !== ST.WIN && G.state !== ST.OVER) G.runTicks++;
+  update(STEP);
+}
+function tick(){
+  const m = inputMask();
+  recordTick(m);
+  stepFromMask(m);
+}
+
+function keyPressed(k){
+  audioInit();
+  if(k==='restart'){ resetRun(); return; }
+  if(k!=='fire') return;
+  switch(G.state){
+    case ST.INTRO: resetRun(); break;
+    case ST.READY: fire(); break;
+    case ST.DEAD:  if(G.stateT>0.6) (G.lives>0 ? armLauncher() : resetRun()); break;
+    case ST.CLEAR: if(G.stateT>0.4) startLevel(G.level+1); break;
+    case ST.WIN:
+    case ST.OVER:  resetRun(); break;
+  }
+}
+
+//------------------------------------------------- audio (tiny) -------------
+let AC=null, hissGain=null;
+
+// The ignition whoosh works because a resonant band SWEEPS across the spectrum.
+// Held still that character is gone, and flat bright noise reads as steam.
+// So bake the same swept band into a long loop -- but wandering at random rather
+// than on a cycle, because any regular pulse is exactly what chuffs like a train.
+function makeEngineBuffer(){
+  const sr = AC.sampleRate, n = Math.round(sr*6);
+  const b = AC.createBuffer(1, n, sr), d = b.getChannelData(0);
+  let low = 0, band = 0, body = 0;          // state-variable filter + one-pole body
+  const q = 1/0.8;
+  let fc = 1200, target = 1200, hold = 0;
+  const glide = Math.exp(-1/(sr*0.16));     // ~160ms to reach a new pitch, like the whoosh ramp
+  const fMax = sr*0.45;
+  for(let i=0;i<n;i++){
+    if(hold-- <= 0){                        // pick somewhere new to sweep to
+      target = 420*Math.pow(3400/420, Math.random());
+      hold = sr*(0.10 + Math.random()*0.30);
+    }
+    fc = target + (fc-target)*glide;
+    const f = 2*Math.sin(Math.PI*Math.min(fc, fMax)/sr);
+    const x = Math.random()*2-1;
+    const high = x - low - q*band;          // highpass leg = the air on top
+    band += f*high;                         // bandpass leg = the swept voice
+    low  += f*band;
+    body += (x - body)*0.010;               // ~70Hz, a little weight underneath
+    d[i] = band*0.75 + high*0.28 + body*3.0;
+  }
+  let peak = 0; for(let i=0;i<n;i++) peak = Math.max(peak, Math.abs(d[i]));
+  if(peak > 0){ const g = 0.9/peak; for(let i=0;i<n;i++) d[i] *= g; }
+  const xf = Math.round(sr*0.03);           // hide the loop seam
+  for(let i=0;i<xf;i++){ const w = i/xf; d[i] = d[i]*w + d[n-xf+i]*(1-w); }
+  return b;
+}
+function audioInit(){
+  if(AC) { if(AC.state==='suspended') AC.resume(); return; }
+  try { AC = new (window.AudioContext||window.webkitAudioContext)(); } catch(e){ return; }
+  const src = AC.createBufferSource(); src.buffer = makeEngineBuffer(); src.loop = true;
+  hissGain = AC.createGain(); hissGain.gain.value = 0;
+  src.connect(hissGain); hissGain.connect(AC.destination);
+  src.start();
+}
+// on/off with a soft attack and a tail, so it never clicks.
+// only fires on a change -- otherwise it would queue 60 automation events a second.
+let engineOn = false;
+function engineSound(on){
+  if(!AC || !hissGain || on === engineOn) return;
+  engineOn = on;
+  const t = AC.currentTime;
+  hissGain.gain.setTargetAtTime(on ? 0.16 : 0, t, on ? 0.025 : 0.10);
+}
+// big filtered swoosh for ignition
+function whoosh(dur, vol){
+  if(!AC) return;
+  const n = Math.floor(AC.sampleRate*dur), b = AC.createBuffer(1, n, AC.sampleRate), d = b.getChannelData(0);
+  for(let i=0;i<n;i++){ const t=i/n; d[i] = (Math.random()*2-1) * Math.min(1, t*16) * Math.pow(1-t, 0.7); }
+  const s = AC.createBufferSource(); s.buffer = b;
+  const f = AC.createBiquadFilter(); f.type='bandpass'; f.Q.value=0.7;
+  const now = AC.currentTime;
+  f.frequency.setValueAtTime(160, now);
+  f.frequency.exponentialRampToValueAtTime(2400, now+dur*0.40);
+  f.frequency.exponentialRampToValueAtTime(420,  now+dur);
+  const g = AC.createGain(); g.gain.value = vol;
+  s.connect(f); f.connect(g); g.connect(AC.destination); s.start();
+}
+function beep(f, dur, type, vol){
+  if(!AC) return;
+  const o=AC.createOscillator(), g=AC.createGain();
+  o.type=type||'square'; o.frequency.setValueAtTime(f, AC.currentTime);
+  g.gain.setValueAtTime(vol||0.08, AC.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.0001, AC.currentTime+dur);
+  o.connect(g); g.connect(AC.destination); o.start(); o.stop(AC.currentTime+dur);
+}
+function noise(dur, vol){
+  if(!AC) return;
+  const n = AC.sampleRate*dur, b = AC.createBuffer(1, n, AC.sampleRate), d = b.getChannelData(0);
+  for(let i=0;i<n;i++) d[i] = (Math.random()*2-1) * (1-i/n);
+  const s = AC.createBufferSource(); s.buffer=b;
+  const g = AC.createGain(); g.gain.value = vol||0.3;
+  const f = AC.createBiquadFilter(); f.type='lowpass'; f.frequency.value=900;
+  s.connect(f); f.connect(g); g.connect(AC.destination); s.start();
+}
+
+//------------------------------------------------- level flow ---------------
+function startLevel(i){
+  if(i >= LEVELS.length){ G.state = ST.WIN; G.stateT = 0; fetchTop(); return; }
+  G.level = i;
+  const L = new Level(LEVELS[i]);
+  L.build(L);
+  uploadStatic(new Float32Array(L.S));
+  G.L = L;
+  armLauncher();
+  toast(L.name, 2.2);
+}
+function armLauncher(){
+  G.state = ST.READY; G.stateT = 0;
+  G.launchAngle = 0.62; G.parts.length = 0; G.rocketGone = false;
+  G.fuelMax = (G.L && G.L.fuel) || START_FUEL;
+  G.fuel = G.fuelMax;
+  G.combo = 0; G.comboT = 0;
+  if(G.L) for(const c of G.L.coins) c.taken = false;
+  G.yaw = 0; G.pitch = G.launchAngle; G.roll = 0;
+  G.vel.x=G.vel.y=G.vel.z=0;
+  placeOnRamp();
+  G.cam.x = 16; G.cam.y = 9; G.cam.z = RAMP.z-6; G.camInit = true;
+  if(G.L) for(const g of G.L.gates) g.passed = false;
+}
+function placeOnRamp(){
+  const a = G.launchAngle;
+  G.pos.x = RAMP.x; G.pos.y = RAMP.y + Math.sin(a)*2.4; G.pos.z = RAMP.z + Math.cos(a)*2.4;
+}
+function fire(){
+  G.state = ST.LAUNCH; G.stateT = 0; G.launchT = 0;
+  beep(120, 0.12, 'square', 0.12);
+}
+function launchNow(){
+  const a = G.launchAngle;
+  const sp = 38;
+  G.vel.x = 0; G.vel.y = Math.sin(a)*sp; G.vel.z = Math.cos(a)*sp;
+  G.pitch = a; G.yaw = 0; G.roll = 0;
+  G.state = ST.FLY; G.stateT = 0;
+  G.shake = 0.8;
+  whoosh(0.9, 0.45); beep(52, 0.35, 'sine', 0.16);   // ignition swoosh + a low thump
+  for(let i=0;i<40;i++) spawnPart(G.pos, 10, PAL.hazardA, 1.2);
+}
+function crash(reason){
+  if(G.state !== ST.FLY) return;
+  G.state = ST.DEAD; G.stateT = 0; G.shake = 1.4;
+  if(!cheat.rockets) G.lives--;
+  G.deadReason = reason;
+  G.deadAt = V3(G.pos.x, G.pos.y, G.pos.z);
+  G.deadCam = V3(G.cam.x, G.cam.y, G.cam.z);
+  noise(0.7, 0.5); beep(90, 0.6, 'sawtooth', 0.12);
+  for(let i=0;i<90;i++) spawnPart(G.pos, 18, i%3===0?PAL.hazardA:(i%3===1?hex(0xff7a2e):PAL.metalDark), 1.8);
+  flash();
+}
+function hitTarget(){
+  const T = G.L.target;
+  const off = Math.max(Math.abs(G.pos.x - T.x), Math.abs(G.pos.y - T.y)) / T.s;  // 0 centre .. 1 edge
+  const ring = Math.min(3, Math.floor(off*4));
+  const bonus = [800, 550, 400, 300][ring];
+  G.hitInfo = { ring, bonus, label:['BULLSEYE!','GREAT SHOT','ON TARGET','JUST INSIDE'][ring] };
+  G.score += bonus;
+  G.state = ST.CLEAR; G.stateT = 0; G.shake = 2.4;
+  G.vel.x = G.vel.y = G.vel.z = 0;
+  G.rocketGone = true;                       // it does not survive the impact
+
+  // fireball
+  const FIRE = [hex(0xfff4c0), hex(0xffd24a), hex(0xff8a1e), hex(0xff3b1e)];
+  for(let i=0;i<170;i++){
+    const p = spawnPart(G.pos, 30, FIRE[i&3], 2.4);
+    if(p){ p.s *= 1.7; p.vz -= 5; }
+  }
+  // the rocket comes apart into the very voxels it was built from
+  eulerR(R_ROCKET, G.yaw, -G.pitch, G.roll);
+  for(let rep=0; rep<3; rep++){
+    for(const part of ROCKET_PARTS){
+      rotv(R_ROCKET, part[0], part[1], part[2], tmp);
+      const p = spawnPart({x:G.pos.x+tmp.x, y:G.pos.y+tmp.y, z:G.pos.z+tmp.z}, 22, part[6], 3.4);
+      if(p){ p.s = Math.max(part[3], part[4], part[5]) * 0.85; p.vz -= 9; }
+    }
+  }
+  // splinters knocked off the target itself
+  const CHIPS = [hex(0xffd24a), hex(0xd93b3b), hex(0xf2f2f7)];
+  for(let i=0;i<60;i++){
+    const p = spawnPart(G.pos, 20, CHIPS[i%3], 3.0);
+    if(p){ p.s *= 1.2; p.vz -= 11; }
+  }
+  flash();
+  noise(0.9, 0.6); beep(42, 0.8, 'sine', 0.26); whoosh(0.5, 0.35);
+  setTimeout(()=>beep(660,0.1,'square',0.1), 260);
+  setTimeout(()=>beep(880,0.1,'square',0.1), 380);
+  setTimeout(()=>beep(1320-ring*180,0.22,'square',0.1), 500);
+  toast(G.hitInfo.label, 1.6);
+}
+function resetRun(){
+  G.score = 0; G.lives = 3; G.coins = 0; G.runTicks = 0;
+  G.submit = { state:'idle', msg:'' }; G.cheated = false;
+  startLevel(0);
+}
+
+//------------------------------------------------- particles ----------------
+function spawnPart(p, spread, col, life){
+  if(G.parts.length > 900) return null;
+  const q = { x:p.x, y:p.y, z:p.z,
+    vx:(Math.random()-0.5)*spread, vy:(Math.random()-0.5)*spread, vz:(Math.random()-0.5)*spread,
+    life:life*(0.5+Math.random()*0.8), max:life, s:0.4+Math.random()*0.9, col };
+  G.parts.push(q); return q;
+}
+function updateParts(dt){
+  for(let i=G.parts.length-1;i>=0;i--){
+    const p = G.parts[i];
+    p.life -= dt; if(p.life<=0){ G.parts[i]=G.parts[G.parts.length-1]; G.parts.pop(); continue; }
+    p.vy -= 9*dt;
+    p.x += p.vx*dt; p.y += p.vy*dt; p.z += p.vz*dt;
+    if(p.y < GROUND_Y+0.2){ p.y = GROUND_Y+0.2; p.vy *= -0.35; p.vx*=0.7; p.vz*=0.7; }
+  }
+}
+
+//------------------------------------------------- rocket model -------------
+const ROCKET_PARTS = [
+  // [lx,ly,lz, sx,sy,sz, color]
+  [0,0,0,      1.15,1.15,2.3, hex(0xf2f2f7)],
+  [0,0,0.35,   1.22,1.22,0.55, hex(0xd93b3b)],
+  [0,0,-0.55,  1.22,1.22,0.4,  hex(0xd93b3b)],
+  [0,0,1.45,   0.9,0.9,0.7,    hex(0xd93b3b)],
+  [0,0,1.95,   0.55,0.55,0.45, hex(0xd93b3b)],
+  [0,0,2.25,   0.28,0.28,0.3,  hex(0xb02a2a)],
+  [0,0.62,0.55, 0.5,0.32,0.5,  hex(0x6fd3e8)],
+  [0.85,0,-0.85, 0.75,0.22,1.0, hex(0xd93b3b)],
+  [-0.85,0,-0.85,0.75,0.22,1.0, hex(0xd93b3b)],
+  [0,0.85,-0.85, 0.22,0.75,1.0, hex(0xd93b3b)],
+  [0,-0.85,-0.85,0.22,0.75,1.0, hex(0xd93b3b)],
+  [0,0,-1.35,  0.85,0.85,0.45,  hex(0x4a5361)],
+];
+function drawRocket(){
+  eulerR(R_ROCKET, G.yaw, -G.pitch, G.roll);
+  for(const p of ROCKET_PARTS){
+    rotv(R_ROCKET, p[0], p[1], p[2], tmp);
+    dpush(R_ROCKET, G.pos.x+tmp.x, G.pos.y+tmp.y, G.pos.z+tmp.z, p[3], p[4], p[5], p[6]);
+  }
+  if(G.thrusting){
+    const f = 0.75 + Math.random()*0.5;
+    const cone = [[-1.7, 0.55, hex(0xfff0a0)], [-2.15, 0.42, hex(0xffc02e)], [-2.55, 0.26, hex(0xff6a1e)]];
+    for(const [lz, s, col] of cone){
+      rotv(R_ROCKET, 0, 0, lz*f, tmp);
+      dpush(R_ROCKET, G.pos.x+tmp.x, G.pos.y+tmp.y, G.pos.z+tmp.z, s*f, s*f, 0.65*f, col);
+    }
+  }
+}
+const R_RAMP = new Float32Array(9);
+function drawLauncher(){
+  const a = G.launchAngle;
+  const R = eulerR(R_RAMP, 0, -a, 0);
+  const bx = RAMP.x, by = RAMP.y, bz = RAMP.z;
+  // concrete pad
+  for(let x=-5;x<=5;x+=2.5) for(let z=-6;z<=6;z+=2.5)
+    dpush(IDR, bx+x, GROUND_Y+0.3, bz+z, 2.4, 1.2, 2.4, ((x+z)/2.5|0)&1?PAL.concrete:PAL.concrete2);
+  // support wedge
+  dpush(IDR, bx, GROUND_Y+1.4, bz-1.5, 4.5, 2.4, 5, PAL.metalDark);
+  dpush(IDR, bx, GROUND_Y+2.4, bz-2.6, 3.5, 2.4, 2.6, PAL.metal);
+  // rails
+  for(const sx of [-1.05, 1.05]){
+    for(let d=-1.6; d<=5.2; d+=1.3){
+      rotv(R, sx, -0.75, d, tmp);
+      dpush(R, bx+tmp.x, by+tmp.y, bz+tmp.z, 0.55, 0.55, 1.25, ((d*10|0)&2)?PAL.hazardA:PAL.hazardB);
+    }
+  }
+  // piston pushing the rocket during launch
+  const push = G.state===ST.LAUNCH ? Math.min(G.launchT/0.35,1)*3.2 : 0;
+  rotv(R, 0, -0.2, -1.8+push, tmp);
+  dpush(R, bx+tmp.x, by+tmp.y, bz+tmp.z, 1.6, 1.0, 1.2, PAL.rust);
+  // angle indicator poles
+  dpush(IDR, bx-4.6, GROUND_Y+3, bz+1, 0.5, 6, 0.5, PAL.metal);
+  dpush(IDR, bx+4.6, GROUND_Y+3, bz+1, 0.5, 6, 0.5, PAL.metal);
+  dpush(IDR, bx-4.6, GROUND_Y+6.4, bz+1, 1.4, 1.4, 1.4, G.state===ST.READY?PAL.glassLit:PAL.carRed);
+  dpush(IDR, bx+4.6, GROUND_Y+6.4, bz+1, 1.4, 1.4, 1.4, G.state===ST.READY?PAL.glassLit:PAL.carRed);
+}
+
+//------------------------------------------------- update -------------------
+function update(dt){
+  G.t += dt; G.stateT += dt; G.shake = Math.max(0, G.shake - dt*2.2);
+  const L = G.L;
+  if(L) for(const d of L.dyn) d.update(dt);
+  updateParts(dt);
+
+  if(G.state === ST.READY){
+    const inv = G.invertPitch ? 1 : -1;
+    if(keys.up)   G.launchAngle = clamp(G.launchAngle - inv*dt*0.8, 0.12, 1.25);
+    if(keys.down) G.launchAngle = clamp(G.launchAngle + inv*dt*0.8, 0.12, 1.25);
+    G.pitch = G.launchAngle; placeOnRamp();
+  }
+  else if(G.state === ST.LAUNCH){
+    G.launchT += dt;
+    const k = Math.min(G.launchT/0.35, 1);
+    const a = G.launchAngle;
+    const d = 2.4 + k*3.0;
+    G.pos.y = RAMP.y + Math.sin(a)*d; G.pos.z = RAMP.z + Math.cos(a)*d;
+    if(G.launchT >= 0.35) launchNow();
+  }
+  else if(G.state === ST.FLY){
+    // ---- steering. inv = +1 when inverted (pull back to climb), -1 when normal
+    const rate = 1.9, inv = G.invertPitch ? 1 : -1;
+    if(keys.up)    G.pitch = clamp(G.pitch - inv*rate*dt, -1.15, 1.15);
+    if(keys.down)  G.pitch = clamp(G.pitch + inv*rate*dt, -1.15, 1.15);
+    if(!keys.up && !keys.down) G.pitch *= Math.max(0, 1 - 0.5*dt);   // fins trim back to level
+    let turn = 0;
+    if(keys.left)  turn += 1; if(keys.right) turn -= 1;
+    // yaw is a free heading: no limit, no auto-centring. Turn all the way round
+    // and fly back down the level if you want to.
+    G.yaw += turn*rate*1.45*dt;
+    if(G.yaw >  Math.PI) G.yaw -= 2*Math.PI;
+    if(G.yaw < -Math.PI) G.yaw += 2*Math.PI;
+    G.roll = lerp(G.roll, -turn*0.6, 1-Math.exp(-6*dt));
+
+    // ---- thrust / fuel
+    const wantThrust = !!keys.fire && G.fuel > 0;
+    G.thrusting = wantThrust;
+    // Fixed tank: you get 100 at the launcher and that is all, apart from what
+    // you pick up. Nothing comes back just for waiting.
+    if(cheat.fuel) G.fuel = G.fuelMax;
+    else if(wantThrust) G.fuel = Math.max(0, G.fuel - FUEL_BURN*dt);
+
+    const cp = Math.cos(G.pitch), sp = Math.sin(G.pitch);
+    const fx = Math.sin(G.yaw)*cp, fy = sp, fz = Math.cos(G.yaw)*cp;
+
+    if(wantThrust){
+      const P = 48;
+      G.vel.x += fx*P*dt; G.vel.y += fy*P*dt; G.vel.z += fz*P*dt;
+      if(Math.random() < dt*70){
+        rotv(eulerR(R_ROCKET, G.yaw, -G.pitch, G.roll), 0,0,-1.9, tmp);
+        const sp = spawnPart({x:G.pos.x+tmp.x, y:G.pos.y+tmp.y, z:G.pos.z+tmp.z}, 4,
+                             Math.random()<0.5?hex(0xffbb33):hex(0xff5a1e), 0.45);
+        if(sp){ sp.s *= 0.45; sp.vz += G.vel.z*0.4; sp.vy += G.vel.y*0.4; sp.vx += G.vel.x*0.4; }
+      }
+      engineSound(true);
+    } else engineSound(false);
+
+    // ---- fins: the velocity vector swings toward the nose, and the faster you go
+    //      the harder they bite. This is what makes a dive trade height for speed,
+    //      a climb trade speed for height, and steering work with the engine off.
+    const airspeed = Math.hypot(G.vel.x, G.vel.y, G.vel.z);
+    if(airspeed > 1){
+      const k = 1 - Math.exp(-1.5*dt);
+      G.vel.x += (fx*airspeed - G.vel.x)*k;
+      G.vel.y += (fy*airspeed - G.vel.y)*k;
+      G.vel.z += (fz*airspeed - G.vel.z)*k;
+    }
+
+    // ---- gravity, then quadratic drag so speed self-limits instead of running away
+    G.vel.y -= 15*dt;
+    const d = 1 - (0.018*airspeed + 0.15)*dt;
+    G.vel.x *= d; G.vel.y *= d; G.vel.z *= d;
+
+    G.pos.x += G.vel.x*dt; G.pos.y += G.vel.y*dt; G.pos.z += G.vel.z*dt;
+
+    // Ceiling: obstacles are only built up to CEIL, so without this you could
+    // simply climb over the whole level. Yaw stays free -- you can still turn
+    // round and fly back -- but you cannot go over the top.
+    if(G.pos.y > CEIL-1){ G.pos.y = CEIL-1; G.vel.y = Math.min(G.vel.y, 0)*0.3; }
+
+    // ---- collisions
+    const r = 0.95;
+    if(G.pos.y < GROUND_Y + 0.9){ crash('GROUND IMPACT'); return; }
+    const T = L.target;
+    if(T && Math.abs(G.pos.z - T.z) < 2.4 + r &&
+       Math.abs(G.pos.x - T.x) < T.s && Math.abs(G.pos.y - T.y) < T.s){ hitTarget(); return; }
+    for(const c of L.colliders){
+      if(Math.abs(c.z - G.pos.z) > c.hz + 4) continue;
+      if(obbHit(G.pos.x-c.x, G.pos.y-c.y, G.pos.z-c.z, c.hx, c.hy, c.hz, r)){ crash('YOU HIT A WALL'); return; }
+    }
+    for(const d of L.dyn){
+      if(Math.abs(d.z - G.pos.z) > 26) continue;
+      if(d.hit(G.pos, r)){ crash(d instanceof Car ? 'SMASHED A CAR' : 'OBSTACLE HIT'); return; }
+    }
+
+    // ---- gates
+    for(const g of L.gates){
+      if(!g.passed && G.pos.z > g.z){
+        g.passed = true; G.score += 100;
+        G.fuel = Math.min(G.fuelMax, G.fuel + GATE_FUEL);
+        beep(880, 0.07, 'square', 0.06);
+        toast('+100   +' + GATE_FUEL + ' FUEL', 0.7);   // say what it actually gives
+      }
+    }
+
+    // ---- coins. A streak multiplier rewards stringing a whole run together.
+    for(const c of L.coins){
+      if(c.taken || Math.abs(c.z - G.pos.z) > 4) continue;
+      const dx = G.pos.x-c.x, dy = G.pos.y-c.y, dz = G.pos.z-c.z;
+      if(dx*dx + dy*dy + dz*dz > 6.0) continue;
+      c.taken = true;
+      G.combo = Math.min(8, G.combo + 1);
+      G.comboT = 2.0;
+      G.coins++;
+      const worth = 25 * G.combo;
+      G.score += worth;
+      G.fuel = Math.min(G.fuelMax, G.fuel + COIN_FUEL);
+      beep(1046 + G.combo*90, 0.06, 'square', 0.05);
+      if(G.combo > 1) toast('+' + worth + '   x' + G.combo, 0.5);
+      for(let i=0;i<10;i++){
+        const p = spawnPart(c, 7, hex(0xffd24a), 0.7);
+        if(p) p.s *= 0.5;
+      }
+    }
+    G.comboT -= dt;
+    if(G.comboT <= 0) G.combo = 0;
+  }
+  else if(G.state === ST.DEAD){
+    engineSound(false);
+    G.pos.y = Math.max(G.pos.y - dt*4, -6);
+    if(G.stateT > 1.6 && G.lives <= 0){ G.state = ST.OVER; G.stateT = 0; }
+  }
+  else { engineSound(false); }
+
+  updateCamera(dt);
+}
+
+function updateCamera(dt){
+  let tx,ty,tz, lx,ly,lz;
+  if(G.state===ST.READY || G.state===ST.LAUNCH){
+    tx = RAMP.x+21; ty = RAMP.y+11; tz = RAMP.z-13;
+    lx = RAMP.x-2; ly = RAMP.y+10; lz = RAMP.z+14;
+  } else if(G.state===ST.DEAD && G.deadCam){
+    tx = G.deadCam.x; ty = Math.max(G.deadCam.y, GROUND_Y+3); tz = G.deadCam.z;
+    lx = G.deadAt.x; ly = Math.max(G.deadAt.y, GROUND_Y+1.5); lz = G.deadAt.z;
+  } else if(G.state===ST.CLEAR || G.state===ST.WIN){
+    const T = G.L && G.L.target;
+    tx = G.pos.x+11; ty = G.pos.y+6; tz = G.pos.z-16;
+    lx = T?T.x:G.pos.x; ly = T?T.y:G.pos.y; lz = T?T.z:G.pos.z;
+  } else {
+    const cp=Math.cos(G.pitch), fx=Math.sin(G.yaw)*cp, fy=Math.sin(G.pitch), fz=Math.cos(G.yaw)*cp;
+    tx = G.pos.x - fx*11; ty = G.pos.y - fy*4.5 + 3.8; tz = G.pos.z - fz*11;
+    ty = Math.max(ty, GROUND_Y+2.6);
+    lx = G.pos.x + fx*7; ly = G.pos.y + fy*5 + 0.6; lz = G.pos.z + fz*7;
+  }
+  const k = G.camInit ? 1-Math.exp(-7*dt) : 1;
+  G.camInit = true;
+  G.cam.x = lerp(G.cam.x, tx, k); G.cam.y = lerp(G.cam.y, ty, k); G.cam.z = lerp(G.cam.z, tz, k);
+  G.camLook.x = lerp(G.camLook.x||lx, lx, k); G.camLook.y = lerp(G.camLook.y||ly, ly, k); G.camLook.z = lerp(G.camLook.z||lz, lz, k);
+}
+
+//------------------------------------------------- render -------------------
+const mProj = new Float32Array(16), mView = new Float32Array(16), mVP = new Float32Array(16);
+function render(){
+  const L = G.L;
+  const sky = L ? L.sky : [hex(0x223), hex(0x557)];
+  const fogc = L ? L.fogCol : hex(0x557);
+
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+  gl.viewport(0,0,RTW,RTH);
+  gl.depthMask(true);
+  gl.clear(gl.DEPTH_BUFFER_BIT);
+  gl.disable(gl.DEPTH_TEST); gl.depthMask(false); gl.disable(gl.CULL_FACE);
+  gl.useProgram(pSky);
+  gl.uniform3fv(uTop, sky[0]); gl.uniform3fv(uBot, sky[1]);
+  gl.bindVertexArray(quadVAO); gl.drawArrays(gl.TRIANGLES,0,3);
+  gl.enable(gl.DEPTH_TEST); gl.depthMask(true);
+  gl.enable(gl.CULL_FACE); gl.cullFace(gl.BACK); gl.frontFace(gl.CCW);
+
+  const sh_ = G.shake;
+  const sx = (Math.random()-0.5)*sh_*1.6, sy = (Math.random()-0.5)*sh_*1.6;
+  perspective(mProj, 1.15, RTW/RTH, 0.5, 320);
+  lookAt(mView, G.cam.x+sx, G.cam.y+sy, G.cam.z, G.camLook.x, G.camLook.y, G.camLook.z, 0,1,0);
+  mul4(mVP, mProj, mView);
+
+  gl.useProgram(pScene);
+  gl.uniformMatrix4fv(uVP, false, mVP);
+  gl.uniform3f(uCam, G.cam.x, G.cam.y, G.cam.z);
+  gl.uniform3fv(uFog, fogc);
+  gl.uniform2f(uFogR, 70, 190);
+  gl.uniform3f(uLight, 0.45, 0.82, -0.35);
+
+  if(staticBatch && staticBatch.count){
+    gl.bindVertexArray(staticBatch.vao);
+    gl.drawElementsInstanced(gl.TRIANGLES, 36, gl.UNSIGNED_SHORT, 0, staticBatch.count);
+  }
+
+  // dynamic
+  dynN = 0;
+  if(L) for(const d of L.dyn){ if(Math.abs(d.z - G.pos.z) < 160) d.draw(); }
+  if(G.state===ST.READY || G.state===ST.LAUNCH || (G.state===ST.FLY && G.pos.z < 60)) drawLauncher();
+  if(!G.rocketGone && G.state!==ST.OVER && G.state!==ST.INTRO
+     && (G.state!==ST.DEAD || G.stateT<0.15)) drawRocket();
+  for(const p of G.parts){
+    const dx=p.x-G.cam.x, dy=p.y-G.cam.y, dz=p.z-G.cam.z;
+    if(dx*dx+dy*dy+dz*dz < 42) continue;          // don't smear cubes over the lens
+    const s = p.s * clamp(p.life/p.max, 0.15, 1);
+    dpush(IDR, p.x, p.y, p.z, s, s, s, p.col);
+  }
+  // coins: a spinning ring of four cubes, so they read as a pickup from far off
+  if(L){
+    const R_COIN = new Float32Array(9);
+    for(const c of L.coins){
+      if(c.taken || Math.abs(c.z - G.pos.z) > 150) continue;
+      const spin = G.t*2.6 + c.z*0.11;
+      eulerR(R_COIN, spin, 0, 0);
+      const bob = Math.sin(G.t*2.2 + c.x*0.4)*0.22;
+      for(let k=0;k<4;k++){
+        const a = spin + k*Math.PI/2;
+        dpush(R_COIN, c.x + Math.cos(a)*0.62, c.y + bob + Math.sin(a)*0.62, c.z,
+              0.42, 0.42, 0.42, k&1 ? hex(0xffd24a) : hex(0xfff0a0));
+      }
+      dpush(R_COIN, c.x, c.y + bob, c.z, 0.30, 0.30, 0.30, hex(0xfff6c8));
+    }
+  }
+
+  // target beacons: four corner lights that pulse so the goal is unmissable
+  if(L && L.target && Math.abs(L.target.z - G.pos.z) < 220){
+    const T = L.target, pulse = 0.7 + 0.3*Math.sin(G.t*5);
+    const c = [hex(0xffd24a)[0]*pulse, hex(0xffd24a)[1]*pulse, hex(0xffd24a)[2]*pulse];
+    for(const sx of [-1,1]) for(const sy of [-1,1])
+      dpush(IDR, T.x+sx*(T.s+2.6), T.y+sy*(T.s+2.6), T.z-2.4, 2.2, 2.2, 2.2, c);
+  }
+  if(dynN){
+    gl.bindBuffer(gl.ARRAY_BUFFER, dynBatch.buf);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, dynData, 0, dynN*19);
+    gl.bindVertexArray(dynBatch.vao);
+    gl.drawElementsInstanced(gl.TRIANGLES, 36, gl.UNSIGNED_SHORT, 0, dynN);
+  }
+
+  // blit upscaled
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.viewport(0,0,VW,VH);
+  gl.disable(gl.DEPTH_TEST); gl.disable(gl.CULL_FACE);
+  gl.useProgram(pBlit);
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, fboTex);
+  gl.uniform1i(uT, 0);
+  gl.bindVertexArray(quadVAO); gl.drawArrays(gl.TRIANGLES,0,3);
+  gl.bindVertexArray(null);
+}
+
+//------------------------------------------------- HUD ----------------------
+const elL=document.getElementById('hudL'), elR=document.getElementById('hudR'),
+      elFuel=document.getElementById('fuel'), elProg=document.getElementById('prog'),
+      elMsg=document.getElementById('msg'), elCenter=document.getElementById('center'),
+      elToast=document.getElementById('toast'), elFlash=document.getElementById('flash'),
+      elFuelLbl=document.getElementById('fuelLbl');
+let toastT = 0;
+function toast(txt, t){ elToast.textContent = txt; toastT = t; }
+function flash(){ elFlash.style.opacity = 0.38; }
+
+function updateHUD(dt){
+  const L = G.L;
+  elL.innerHTML = (L ? L.name.replace('LEVEL ','LVL ') : 'ROCKET BLAST') + '<br>SCORE ' + G.score +
+    (L ? '<br><span class="hl">&#9679;</span> ' + G.coins +
+         (G.combo > 1 ? '  <span class="hl">x' + G.combo + '</span>' : '') : '');
+  const spd = Math.hypot(G.vel.x,G.vel.y,G.vel.z);
+  elR.innerHTML = 'LIVES ' + (cheat.rockets
+      ? '<span class="hl">&infin;</span>'
+      : '<span class="bad">' + '#'.repeat(Math.max(0,G.lives)) + '</span>') +
+                  '<br>SPD ' + spd.toFixed(0);
+  const fuelPct = clamp(G.fuel / (G.fuelMax || 1) * 100, 0, 100);
+  elFuel.style.width = fuelPct + '%';
+  elFuel.style.background = cheat.fuel ? '#54f2f2'
+      : (fuelPct < 25 ? '#ff5252' : (fuelPct < 55 ? '#ffb02e' : '#7dffa0'));
+  elFuelLbl.textContent = cheat.fuel ? 'FUEL ∞' : 'FUEL';
+  elProg.style.width = (L ? clamp(G.pos.z/L.len,0,1)*100 : 0) + '%';
+
+  toastT = Math.max(0, toastT - dt);
+  elToast.style.opacity = toastT > 0 ? Math.min(1, toastT*2.5) : 0;
+  elFlash.style.opacity = Math.max(0, parseFloat(elFlash.style.opacity||0) - dt*1.6);
+
+  let html = '';
+  switch(G.state){
+    case ST.INTRO: {
+      const inv = G.invertPitch, touch = document.body.classList.contains('touch');
+      const kUp = touch ? '&#9650;' : '&uarr;', kDn = touch ? '&#9660;' : '&darr;';
+      html = `<h1>ROCKET BLAST</h1>
+      <p style="margin-top:10px">
+        <span class="key">${kUp}</span> nose <b>${inv?'down':'up'}</b> &nbsp;
+        <span class="key">${kDn}</span> nose <b>${inv?'up':'down'}</b>` + (touch ? `<br>
+        <span class="key">&#9664;</span><span class="key">&#9654;</span> steer left / right<br>
+        <span class="key">FIRE</span> hold to burn the engine (costs fuel)
+      ` : `<br>
+        <span class="key">&larr;</span><span class="key">&rarr;</span> steer left / right<br>
+        <span class="key">SPACE</span> fire the engine (burns fuel)<br>
+        <span class="key">R</span> restart run
+      `) + `</p>
+      <button id="invBtn">PITCH: <span class="sw">${inv?'INVERTED':'NORMAL'}</span>
+        &nbsp;<span class="dim">${touch?'tap':'click'} to flip</span></button>
+      ${topTable(10) ? `<div class="boardTitle">TOP PILOTS</div>` + topTable(10) : ''}
+      <p class="hl" style="margin-top:14px">PRESS SPACE TO START</p>`;
+      break; }
+    case ST.READY:
+      html = `<h2>${L.name}</h2><p>${L.hint}</p>
+      <p style="margin-top:10px">LAUNCH ANGLE <span class="hl">${(G.launchAngle*180/Math.PI).toFixed(0)}&deg;</span>
+      &nbsp; <span class="dim">(${G.invertPitch?'&darr; raises, &uarr; lowers':'&uarr; raises, &darr; lowers'})</span></p>
+      <p class="hl" style="margin-top:8px">PRESS SPACE TO LAUNCH</p>`;
+      break;
+    case ST.DEAD:
+      html = G.lives > 0
+        ? `<h2 class="bad">${G.deadReason||'CRASHED'}</h2><p>${G.lives} rocket${G.lives===1?'':'s'} left</p>
+           <p class="hl" style="margin-top:8px">PRESS SPACE TO RELAUNCH</p>`
+        : `<h2 class="bad">${G.deadReason||'CRASHED'}</h2><p>no rockets left...</p>`;
+      break;
+    case ST.CLEAR: {
+      const h = G.hitInfo || { label:'ON TARGET', bonus:0 };
+      html = `<h2 class="good">${h.label}</h2><p>target bonus <span class="hl">+${h.bonus}</span>
+              &nbsp; SCORE <span class="hl">${G.score}</span></p>
+              <p class="hl" style="margin-top:8px">PRESS SPACE FOR ${G.level+2 <= LEVELS.length ? 'NEXT LEVEL' : 'THE END'}</p>`;
+      break; }
+    case ST.WIN: {
+      const sub = G.submit || { state:'idle' };
+      const form = G.cheated
+        ? `<p class="bad" style="margin-top:12px">cheats were used — this run can't be submitted</p>`
+        : `<div id="subRow" style="margin-top:14px">
+             <input id="subName" maxlength="16" placeholder="YOUR NAME" autocomplete="off" spellcheck="false">
+             <button id="subBtn">SUBMIT RECORD</button>
+           </div>`;
+      const status =
+        sub.state === 'sending' ? `<p class="dim" style="margin-top:12px">sending…</p>`
+      : sub.state === 'done'    ? `<p class="good" style="margin-top:12px">${sub.msg}</p>`
+      : sub.state === 'error'   ? `<p class="bad" style="margin-top:10px">${sub.msg}</p>` + form
+      :                           form;
+      // level count is read from the data, so adding levels needs no change here
+      html = `<h1 class="good">MISSION COMPLETE</h1>
+              <p>All ${LEVELS.length} levels cleared.</p>
+              <p style="margin-top:8px">TIME <span class="hl">${fmtTime(G.runTicks/60)}</span>
+                 &nbsp;·&nbsp; SCORE <span class="hl">${G.score}</span>
+                 &nbsp;·&nbsp; COINS <span class="hl">${G.coins}</span></p>
+              ${status}
+              ${topTable(10)}
+              <p class="hl" style="margin-top:14px">PRESS SPACE TO FLY AGAIN</p>`;
+      break; }
+    case ST.OVER:
+      html = `<h1 class="bad">GAME OVER</h1><p>SCORE <span class="hl">${G.score}</span></p>
+              <p class="hl" style="margin-top:10px">PRESS SPACE TO RESTART</p>`;
+      break;
+  }
+  if(document.body.classList.contains('touch'))
+    html = html.replace(/PRESS SPACE/g, 'TAP').replace(/<span class="key">R<\/span> restart run/, '');
+  elCenter.style.display = html ? 'flex' : 'none';
+  if(html !== elMsg.dataset.h){
+    elMsg.innerHTML = html; elMsg.dataset.h = html;
+    const b = elMsg.querySelector('#invBtn');
+    if(b) b.addEventListener('pointerdown', e=>{ e.stopPropagation(); togglePitchInvert(); });
+    const t = elMsg.querySelector('h1');
+    if(t) t.addEventListener('pointerdown', titleTap);
+    const sb = elMsg.querySelector('#subBtn');
+    if(sb) sb.addEventListener('pointerdown', e=>{ e.stopPropagation(); submitRecord(); });
+    const si = elMsg.querySelector('#subName');
+    if(si){
+      si.addEventListener('pointerdown', e=>e.stopPropagation());
+      si.addEventListener('keydown', e=>{
+        e.stopPropagation();
+        if(e.key === 'Enter') submitRecord();
+      });
+    }
+  }
+}
+
+//------------------------------------------------- main loop ----------------
+// Fixed 60 Hz simulation. Every update() sees exactly the same dt on every
+// machine, which is what makes a run reproducible from its inputs alone --
+// and incidentally makes the physics identical on 60 Hz and 144 Hz displays.
+const STEP = 1/60;
+let last = performance.now(), acc = 0;
+function frame(now){
+  let elapsed = (now - last)/1000; last = now;
+  if(elapsed > 0.25) elapsed = 0.25;      // came back from a background tab; don't catch up
+  acc += elapsed;
+  let steps = 0;
+  while(acc >= STEP && steps < 8){ tick(); acc -= STEP; steps++; }
+  if(steps === 8) acc = 0;                // too far behind to ever catch up
+  render();
+  updateHUD(elapsed);
+  requestAnimationFrame(frame);
+}
+// boot
+G.L = null;
+recordReset();        // one unbroken input log for the whole session
+fetchTop();
+requestAnimationFrame(frame);
+
+// let an embedding host know the game is running (wrapped: window.parent does not
+// exist in the headless harness the tools and the leaderboard server use)
+try { window.parent.postMessage({ type: 'WIDGETIFY_APP_READY' }, '*'); } catch(_){}
+</script>
+</body>
+</html>

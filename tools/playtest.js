@@ -10,6 +10,17 @@ function pilot() {
   for (const q of L.gates) if (!q.passed && q.z > G.pos.z) { g = q; break; }
   let tx = g ? g.ax : 0, ty = g ? Math.max(g.ay, 10) : 14;
   if (!g && L.target) { tx = L.target.x; ty = L.target.y; }   // last leg: line up the bullseye
+  // detour for a coin if one is close ahead and roughly on the way
+  let best = null, bestD = 1e9;
+  for (const c of L.coins) {
+    const dz = c.z - G.pos.z;
+    if (c.taken || dz < 2 || dz > 34) continue;
+    if (g && c.z > g.z + 2) continue;                         // never past the next gate
+    const off = Math.abs(c.x - tx) + Math.abs(c.y - ty);
+    if (off > 12) continue;                                   // not worth leaving the line
+    if (dz < bestD) { bestD = dz; best = c; }
+  }
+  if (best) { tx = best.x; ty = best.y; }
   if (g && g.obj) {                                  // predict where the moving thing will be
     const o = g.obj, t = (g.z - G.pos.z) / Math.max(G.vel.z, 6);
     if (o.angleAt) {                                 // windmill: aim between two arms
@@ -54,9 +65,12 @@ for (let i = 0; i < 400000; i++) {
     const at = `${k} @ z=${Math.round(b.z / 10) * 10}`;
     spots[at] = (spots[at] || 0) + 1;
   }
-  if (b.s === ST.FLY && G.state === ST.CLEAR)
-    console.log(`  OK  L${b.l + 1} cleared after ${deaths['L' + (b.l + 1)] || 0} deaths` +
-                `  (${G.hitInfo ? G.hitInfo.label : '?'}, score ${G.score})`);
+  if (b.s === ST.FLY && G.state === ST.CLEAR) {
+    const got = G.L.coins.filter(c => c.taken).length;
+    console.log(`  OK  L${String(b.l + 1).padStart(2)} after ${String(deaths['L' + (b.l + 1)] || 0).padStart(3)} deaths` +
+                `   coins ${String(got).padStart(2)}/${String(G.L.coins.length).padStart(2)}` +
+                `   ${G.hitInfo ? G.hitInfo.label.padEnd(12) : ''} score ${G.score}`);
+  }
   if (G.state === ST.WIN) { console.log(`\nWIN  final score ${G.score}`); break; }
 }
 
