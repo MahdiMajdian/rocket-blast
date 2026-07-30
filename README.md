@@ -7,10 +7,6 @@ and thread ten levels of walls, towers, windmills, sliding barriers and traffic.
 Single self-contained file — no build step, no dependencies. Open `index.html` in any
 browser with WebGL2.
 
-```bash
-open /Users/mahdi/Developer/rocket-blast-3d/index.html
-```
-
 ## Controls
 
 Pitch is **inverted**, like a flight stick — pull back to climb.
